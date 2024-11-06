@@ -26,6 +26,22 @@ def download_price_paid_data(year_from, year_to):
                 with open("." + file_name.replace("<year>", str(year)).replace("<part>", str(part)), "wb") as file:
                     file.write(response.content)
 
+import zipfile
+def download_open_postcode_geo_data():
+    url = "https://www.getthedata.com/downloads/open_postcode_geo.csv.zip"
+    zip_file_name = "/open_postcode_geo.csv.zip"
+    response = requests.get(url)
+    if response.status_code == 200:
+        print("Downloading geo data")
+        with open("." + zip_file_name, "wb") as file:
+            file.write(response.content)
+
+        print("Extracting geo data")
+        file_name = "/open_postcode_geo"
+        with zipfile.ZipFile("." + zip_file_name, "r") as file:            
+            file.extractall("." + file_name)
+        
+
 def data():
     """Read the data from the web or local file, returning structured format such as a data frame"""
     raise NotImplementedError
