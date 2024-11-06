@@ -40,7 +40,8 @@ def download_open_postcode_geo_data():
         file_name = "/open_postcode_geo"
         with zipfile.ZipFile("." + zip_file_name, "r") as file:            
             file.extractall("." + file_name)
-            
+
+import pymysql
 def create_connection(user, password, host, database, port=3306):
     """ Create a database connection to the MariaDB database
         specified by the host url and database name.
