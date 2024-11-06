@@ -6,11 +6,15 @@ import oauth2
 import tables
 import mongodb
 import sqlite"""
+import requests
+import zipfile
+import pymysql
+import csv
+import time
 
 # This file accesses the data
 
 """Place commands in this file to access the data electronically. Don't remove any missing values, or deal with outliers. Make sure you have legalities correct, both intellectual property and personal data privacy rights. Beyond the legal side also think about the ethical issues around this data. """
-import requests
 def download_price_paid_data(year_from, year_to):
     # Base URL where the dataset is stored
     base_url = "http://prod.publicdata.landregistry.gov.uk.s3-website-eu-west-1.amazonaws.com"
@@ -26,7 +30,6 @@ def download_price_paid_data(year_from, year_to):
                 with open("." + file_name.replace("<year>", str(year)).replace("<part>", str(part)), "wb") as file:
                     file.write(response.content)
 
-import zipfile
 def download_open_postcode_geo_data():
     url = "https://www.getthedata.com/downloads/open_postcode_geo.csv.zip"
     zip_file_name = "/open_postcode_geo.csv.zip"
@@ -41,7 +44,6 @@ def download_open_postcode_geo_data():
         with zipfile.ZipFile("." + zip_file_name, "r") as file:            
             file.extractall("." + file_name)
 
-import pymysql
 def create_connection(user, password, host, database, port=3306):
     """ Create a database connection to the MariaDB database
         specified by the host url and database name.
@@ -66,8 +68,6 @@ def create_connection(user, password, host, database, port=3306):
         print(f"Error connecting to the MariaDB Server: {e}")
     return conn
 
-import csv
-import time
 def housing_upload_join_data(conn, year):
   start_date = str(year) + "-01-01"
   end_date = str(year) + "-12-31"
