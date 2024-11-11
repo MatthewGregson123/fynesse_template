@@ -11,6 +11,8 @@ import zipfile
 import pymysql
 import csv
 import time
+import osmnx as ox
+import pandas as pd
 
 # This file accesses the data
 
@@ -88,7 +90,88 @@ def housing_upload_join_data(conn, year):
   cur.execute(f"LOAD DATA LOCAL INFILE '" + csv_file_path + "' INTO TABLE `prices_coordinates_data` FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED by '\"' LINES STARTING BY '' TERMINATED BY '\n';")
   conn.commit()
   print('Data stored for year: ' + str(year))
+    
+def create_bounding_box(latitude, longitude, distance_km):
+  box_width = distance_km/111 
+  north = latitude + box_width/2
+  south = latitude - box_width/2
+  west = longitude - box_width/2
+  east = longitude + box_width/2
+  return north, south, west, east
 
+def get_poi_info(tags, north, south, east, west):
+  # get pois information
+  pois = ox.geometries_from_bbox(north, south, east, west, tags)
+
+  # copy before filtering
+  buildings_with_addresses_pois = pois.copy()
+
+  # filter for only places with full addresses
+  for tag in tags:
+    buildings_with_addresses_pois = buildings_with_addresses_pois[buildings_with_addresses_pois[tag].notnull()]
+
+  # Make sure we are using the correct co-ordinate system then calculate area and store it
+  temp = buildings_with_addresses_pois.copy()
+  temp = temp.to_crs(epsg=3395)
+  temp["area_sqm"] = temp.geometry.area
+
+  # convert to a dataframe
+  addresses_pois_df = pd.DataFrame(temp)
+
+  # get the buildings without addresses
+  buildings_without_addresses_pois = pois[~pois.index.isin(buildings_with_addresses_pois.index)]
+
+  # get the graph data
+  graph = ox.graph_from_bbox(north, south, east, west)
+
+  # Retrieve nodes and edges
+  nodes, edges = ox.graph_to_gdfs(graph)
+
+  # Get place boundary related to the place name as a geodataframe
+  area = ox.geocode_to_gdf(place_name)
+  return area, edges, buildings_with_addresses_pois, buildings_without_addresses_pois, addresses_pois_df
+
+def combine_data(prices_coordinates_data_result, addresses_pois_df):
+  transactions_data_dic = {"primary_to_secondary": {}}
+  for row in prices_coordinates_data_result:
+    postcode = row[0]
+    primary_addressable_object_name = row[1]
+
+    if postcode in transactions_data_dic:
+      transactions_data_dic[postcode]["primary_addressable_object_name"].append(primary_addressable_object_name)
+    else:
+      transactions_data_dic[postcode] = {"primary_addressable_object_name": [primary_addressable_object_name], "street": row[3], "latitude": row[4], "longitude": row[5], "price":row[6]}
+
+  matches = []
+  for i in range(len(addresses_pois_df)):
+    row = addresses_pois_df.iloc[i].to_dict()
+    if row["addr:postcode"] in transactions_data_dic:
+      house_number = row["addr:housenumber"].split("-")
+      if len(house_number) == 1:
+        house_number = house_number[0].upper()
+      else:
+        house_number = house_number[0].upper() + " - " + house_number[1].upper()
+      
+      paom1 = paom2 = paom3 = paom4 = paom5 = paom6 = house_number
+
+      if type(row["name"]) is str:
+        paom4  = row["name"].upper()
+        paom1 = paom4 + ", " + paom1
+      if type(row["old_name"]) is str:
+        paom5 = row["old_name"].upper()
+        paom2 = paom5 + ", " + paom2
+      if type(row["addr:housename"]) is str:
+        paom6 = row["addr:housename"].upper()
+        paom3 = paom6 + ", " + paom3
+      
+      paom_list = transactions_data_dic[row["addr:postcode"]]["primary_addressable_object_name"]
+      if paom1 in paom_list or paom2 in paom_list or paom3 in paom_list or paom4 in paom_list or paom5 in paom_list or paom6 in paom_list or row["addr:housenumber"] in paom_list:
+        if row["addr:street"].upper() == transactions_data_dic[row["addr:postcode"]]["street"]:
+          row["longitude"] = transactions_data_dic[row["addr:postcode"]]["longitude"]
+          row["latitude"] = transactions_data_dic[row["addr:postcode"]]["latitude"]
+          row["price"] = transactions_data_dic[row["addr:postcode"]]["price"]
+          matches.append(row)
+  return matches
 def data():
     """Read the data from the web or local file, returning structured format such as a data frame"""
     raise NotImplementedError
