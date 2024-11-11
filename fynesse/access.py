@@ -135,7 +135,7 @@ def count_pois_near_coordinates(latitude: float, longitude: float, tags: dict, d
 
     return dict
 
-def get_pois_df_for_locations(locations_dict):
+def get_pois_df_for_locations(locations_dict, tags):
   rows = []
   # for each item in the dictionary
   for key in locations_dict:
