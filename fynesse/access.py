@@ -99,7 +99,7 @@ def create_bounding_box(latitude, longitude, distance_km):
   east = longitude + box_width/2
   return north, south, west, east
 
-def get_poi_info(tags, north, south, east, west):
+def get_poi_info(tags, north, south, east, west, place_name):
   # get pois information
   pois = ox.geometries_from_bbox(north, south, east, west, tags)
 
