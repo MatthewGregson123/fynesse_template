@@ -99,6 +99,71 @@ def create_bounding_box(latitude, longitude, distance_km):
   east = longitude + box_width/2
   return north, south, west, east
 
+def count_pois_near_coordinates(latitude: float, longitude: float, tags: dict, distance_km: float = 1.0) -> dict:
+    """
+    Count Points of Interest (POIs) near a given pair of coordinates within a specified distance.
+    Args:
+        latitude (float): Latitude of the location.
+        longitude (float): Longitude of the location.
+        tags (dict): A dictionary of OSM tags to filter the POIs (e.g., {'amenity': True, 'tourism': True}).
+        distance_km (float): The distance around the location in kilometers. Default is 1 km.
+    Returns:
+        dict: A dictionary where keys are the OSM tags and values are the counts of POIs for each tag.
+    """
+    # Create the bounding box to get north, south, west, east values
+    north, south, west, east = create_bounding_box(latitude, longitude, distance_km)
+
+    # Get the data and store in a dataframe
+    pois = ox.geometries_from_bbox(north, south, east, west, tags)
+    pois_df = pd.DataFrame(pois)
+
+    dict = {}
+    for key in tags:
+      if key in pois_df.columns:
+        # if the type of the tag is a list
+        if type(tags[key]) == type([]):
+          # then for each item in that list
+          for tag in tags[key]:
+            # sum up all values in the column that equal that item
+            dict[tag] = (pois_df[key]==tag).sum()
+        else:
+          # if its not a list then just count all values in the list that aren't null
+          dict[key] = pois_df[key].notnull().sum()
+      else:
+        # If its not in the columns then its 0
+        dict[key] = 0
+
+    return dict
+
+def get_pois_df_for_locations(locations_dict):
+  rows = []
+  # for each item in the dictionary
+  for key in locations_dict:
+      # get the latitude and longitude
+      latitude, longitude = locations_dict[key]
+      # count the places of interest according to tags
+      row = count_pois_near_coordinates(latitude, longitude, tags)
+      # add the location name to the dictionary
+      row["location"] = key
+      # append the row
+      rows.append(row)
+
+  # Create a list of all the columns
+  columns = ["location"]
+  for key in tags:
+    if type(tags[key]) == type([]):
+      for tag in tags[key]:
+        columns.append(tag)
+    else:
+      columns.append(key)
+
+  # Create a dataframe with the data and columns
+  poi_counts_df = pd.DataFrame(rows, columns=columns)
+  # Set the location to the index
+  poi_counts_df.set_index("location", inplace=True)
+
+  return poi_counts_df
+
 def get_poi_info(tags, north, south, east, west, place_name):
   # get pois information
   pois = ox.geometries_from_bbox(north, south, east, west, tags)
