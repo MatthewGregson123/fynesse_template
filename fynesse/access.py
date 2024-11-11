@@ -171,7 +171,18 @@ def combine_data(prices_coordinates_data_result, addresses_pois_df):
           row["latitude"] = transactions_data_dic[row["addr:postcode"]]["latitude"]
           row["price"] = transactions_data_dic[row["addr:postcode"]]["price"]
           matches.append(row)
-  return matches
+  
+  # Allows you specify order of the first columns
+  columns = ["addr:housenumber","addr:street", "addr:postcode", "addr:city", "price", "area_sqm"]
+
+  # Fills in the rest of the columns
+  for key in matches[0]:
+    if key not in columns:
+      columns.append(key)
+
+  price_area_df = pd.DataFrame(matches, columns=columns)
+  return price_area_df
+
 def data():
     """Read the data from the web or local file, returning structured format such as a data frame"""
     raise NotImplementedError
