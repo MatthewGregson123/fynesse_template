@@ -202,23 +202,20 @@ def compute_distance_matrix(data):
   distance_matrix_df.set_index("node", inplace=True)
   return distance_matrix_df
 
-def plot_correlation_heat_map(data):
-  # get the data correlation values
-  corr = data.corr()
-
-  # initialise the figure
+def plot_heat_map(data, xlabel, ylabel, title):
+  # set the size of the figure
   plt.figure(figsize=(8,6))
+  # plot the heatmap with the colour map virdis, annotations on the cell, 2 d.p, and 0.5 linewidth
+  sns.heatmap(data, cmap='viridis', annot=True, fmt=".2f", linewidths=0.5)
 
-  # plot the heatmap using the colour map virdis, annotating the cells, making sure all are to 2 d.p and leaving a gap inbetween cells
-  sns.heatmap(corr, cmap='viridis', annot=True, fmt=".2f", linewidths=0.5)
+  # set title and axis labels
+  plt.title(title)
+  plt.xlabel(xlabel)
+  plt.ylabel(ylabel)
 
-  # Set title and axis labels
-  plt.title("Feature Correlation heatmap")
-  plt.xlabel("Feature 1")
-  plt.ylabel("Feature 2")
-
-  # Show the figure
+  # show the plot
   plt.show()
+
 
 def plot_map(area,edges, buildings_with_addresses_pois, buildings_without_addresses_pois, north, south, west, east):
   fig, ax = plt.subplots()
