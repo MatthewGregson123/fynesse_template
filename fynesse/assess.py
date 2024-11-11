@@ -54,7 +54,7 @@ def k_means(pois_df, k):
     for i in range(length_dataset):
       # Current node we're examining
       node =  pois_df.iloc[i].to_dict()
-      node_name = poi_counts_df.index[i]
+      node_name = pois_df.index[i]
 
       # Initialise values for checking for closest cluster
       min_distance = math.inf
