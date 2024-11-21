@@ -1,5 +1,5 @@
 # This file contains code for suporting addressing questions in the data
-
+from .config import *
 """# Here are some of the imports we might expect 
 import sklearn.model_selection  as ms
 import sklearn.linear_model as lm
