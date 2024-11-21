@@ -67,7 +67,7 @@ def k_fold_cross_validation(k, x_data, y_data, regularised, alpha, l1_wt, MSE):
   # Return mean and Standard Deviation of result
   return np.mean(MSEs), np.std(MSEs)
 
-  def plot_alpha_MSE(x_data,y_data, l1_wt, min_alpha, max_alpha, steps, title):
+def plot_alpha_MSE(x_data,y_data, l1_wt, min_alpha, max_alpha, steps, title):
   alpha_correlations = []
   alpha_MSE = []
   # splits our range of alphas into steps
@@ -102,7 +102,7 @@ def k_fold_cross_validation(k, x_data, y_data, regularised, alpha, l1_wt, MSE):
   plt.tight_layout()
   plt.show()
 
-  def predict_profile(NS_SEC, truth, norm_age_df, x_data, alpha, l1_wt):
+def predict_profile(NS_SEC, truth, norm_age_df, x_data, alpha, l1_wt):
   preds = []
   # Repeat for all ages
   for i in range(0, 100):
