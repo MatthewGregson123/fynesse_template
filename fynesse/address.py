@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 def k_fold_cross_validation(k, x_data, y_data, regularised, alpha, l1_wt, MSE):
   # Define size of subset
   subset_size = len(x_data) // k
-  MSEs = []
+  preds = []
   # For each combination of train and test
   for i in range(k):
     # Split data into test and train for x and y
@@ -40,32 +40,25 @@ def k_fold_cross_validation(k, x_data, y_data, regularised, alpha, l1_wt, MSE):
 
       # Get the models prediction for the test data
       y_pred = fitted_model.get_prediction(test_data_x).summary_frame(alpha=0.05)
-      # Get the truth for the test data
-      y_true = y_data[i * subset_size : (i+1)*subset_size]
-      if MSE:
-        # if we want the MSE then add MSE to MSEs
-        MSEs.append((np.mean((y_true - y_pred['mean']) ** 2)) ** 0.5)
-      else:
-        # otherwise we want correlation so add the correlation
-        MSEs.append(np.corrcoef(y_true, y_pred['mean'])[0][1])
+
+      # Append prediction to the list of predictions
+      preds.extend(y_pred['mean'])
     else:
       # If we want a regularized model then fit with alpha and l1_wt
       fitted_model = model.fit_regularized(alpha=alpha, L1_wt=l1_wt)
 
       # Get the predictions from the model and the truth
       y_pred = fitted_model.predict(test_data_x)
-      y_true = y_data[i * subset_size : (i+1)*subset_size]
+      
+      # Append prediction to the list of predictions
+      preds.extend(y_pred['mean'])
 
-      if MSE:
-        # Append MSE if thats what we want
-        MSEs.append((np.mean((y_true - y_pred) ** 2)) ** 0.5)
-      else:
-        # Otherwise append correlation coefficient
-        MSEs.append(np.corrcoef(y_true, y_pred)[0][1])
-
-  MSEs = np.array(MSEs)
-  # Return mean and Standard Deviation of result
-  return np.mean(MSEs), np.std(MSEs)
+  # Return correlation or MSE
+  preds = np.array(preds)
+  if MSE:
+    return np.mean((y_data[:len(preds)] - preds) ** 2)
+  else:
+    return np.corrcoef(y_data[:len(preds)], preds)[0][1]
 
 def plot_alpha_MSE(x_data,y_data, l1_wt, min_alpha, max_alpha, steps, title):
   alpha_correlations = []
@@ -73,10 +66,10 @@ def plot_alpha_MSE(x_data,y_data, l1_wt, min_alpha, max_alpha, steps, title):
   # splits our range of alphas into steps
   for i in range(steps):
     # Get the average RMSE over 5 folds with the given alpha and l1_wt
-    mean, _ = k_fold_cross_validation(5, x_data, y_data, True, min_alpha + i * (max_alpha - min_alpha) / steps, l1_wt, MSE=True)
+    mean = k_fold_cross_validation(5, x_data, y_data, True, min_alpha + i * (max_alpha - min_alpha) / steps, l1_wt, MSE=True)
     alpha_MSE.append(mean)
     # Get the average correlation over 5 folds with given alpha and l1_wt
-    mean, _ = k_fold_cross_validation(5, x_data, y_data, True, min_alpha + i * (max_alpha - min_alpha) / steps, l1_wt, MSE=False)
+    mean = k_fold_cross_validation(5, x_data, y_data, True, min_alpha + i * (max_alpha - min_alpha) / steps, l1_wt, MSE=False)
     alpha_correlations.append(mean)
 
   # Create subplot
