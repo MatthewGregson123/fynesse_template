@@ -51,7 +51,7 @@ def k_fold_cross_validation(k, x_data, y_data, regularised, alpha, l1_wt, MSE):
       y_pred = fitted_model.predict(test_data_x)
       
       # Append prediction to the list of predictions
-      preds.extend(y_pred['mean'])
+      preds.extend(y_pred)
 
   # Return correlation or MSE
   preds = np.array(preds)
