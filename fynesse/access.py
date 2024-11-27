@@ -95,8 +95,8 @@ def create_bounding_box(latitude, longitude, distance_km):
   box_width = distance_km/111 
   north = latitude + box_width/2
   south = latitude - box_width/2
-  west = longitude - box_width/2
-  east = longitude + box_width/2
+  west = longitude - box_width/(2*math.cos(math.radians(latitude)))
+  east = longitude + box_width/(2*math.cos(math.radians(latitude)))
   return north, south, west, east
 
 def count_pois_near_coordinates(latitude: float, longitude: float, tags: dict, distance_km: float = 1.0) -> dict:
