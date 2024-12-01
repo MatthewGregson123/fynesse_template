@@ -204,7 +204,7 @@ def compute_distance_matrix(data):
 
 def plot_heat_map(data, xlabel, ylabel, title):
   # set the size of the figure
-  plt.figure(figsize=(8,6))
+  plt.figure(figsize=(12,10))
   # plot the heatmap with the colour map virdis, annotations on the cell, 2 d.p, and 0.5 linewidth
   sns.heatmap(data, cmap='viridis', annot=True, fmt=".2f", linewidths=0.5)
 
