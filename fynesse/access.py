@@ -66,7 +66,7 @@ def create_connection(user, password, host, database, port=3306):
                                local_infile=1,
                                db=database
                                )
-        print(f"Connection established!")
+        # print(f"Connection established!")
     except Exception as e:
         print(f"Error connecting to the MariaDB Server: {e}")
     return conn
