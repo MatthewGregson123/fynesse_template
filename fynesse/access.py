@@ -47,6 +47,14 @@ def download_open_postcode_geo_data():
         with zipfile.ZipFile("." + zip_file_name, "r") as file:            
             file.extractall("." + file_name)
 
+def download_url_data(data_url, extract_dir):
+    response = requests.get(data_url)
+    if response.status_code == 200:
+      with open("." + extract_dir, "wb") as file:
+        file.write(response.content)
+        print("Downloaded file to: ", "." + extract_dir)
+    else:
+      print("Failed to download the file.")
 def create_connection(user, password, host, database, port=3306):
     """ Create a database connection to the MariaDB database
         specified by the host url and database name.
