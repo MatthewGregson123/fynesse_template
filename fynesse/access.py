@@ -82,6 +82,11 @@ def convert_geojson_to_csv(geojson_path, csv_output_path):
               writer.writeheader()
     
             writer.writerow(row)
+
+def split_csv(input_file, chunk_size, output_prefix):
+    chunk = pd.read_csv(input_file, chunksize=chunk_size)
+    for i, part in enumerate(chunk):
+        part.to_csv(output_prefix+ "_" + str(i+1) + ".csv", index=False)
             
 def create_connection(user, password, host, database, port=3306):
     """ Create a database connection to the MariaDB database
