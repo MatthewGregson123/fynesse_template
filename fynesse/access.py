@@ -55,6 +55,31 @@ def download_url_data(data_url, extract_dir):
         print("Downloaded file to: ", "." + extract_dir)
     else:
       print("Failed to download the file.")
+
+def convert_geojson_to_csv(geojson_path, csv_output_path):
+    with open(geojson_path, 'r') as geojson_file:
+        with open(csv_output_path, 'w', newline='', encoding='utf-8') as csv_file:
+            writer = None
+            for feature in ijson.items(geojson_file, 'features.item'):
+                properties = feature.get('properties', {})
+                geometry = feature.get('geometry', {})
+    
+            row = {}
+            row['OA21CD'] = properties.get('OA21CD', '')
+            row['LSOA21CD'] = properties.get('LSOA21CD', '')
+            geom_type = geometry.get('type', '')
+            geom_coordinates = geometry.get('coordinates', '')
+            if geom_type and geom_coordinates:
+              shape_geometry = shape({"type": geom_type, "coordinates": geom_coordinates})
+              row['geometry'] = shape_geometry.wkt
+    
+            if writer is None:
+              headers = list(row.keys())
+              writer = csv.DictWriter(csv_file, fieldnames=headers)
+              writer.writeheader()
+    
+            writer.writerow(row)
+            
 def create_connection(user, password, host, database, port=3306):
     """ Create a database connection to the MariaDB database
         specified by the host url and database name.
