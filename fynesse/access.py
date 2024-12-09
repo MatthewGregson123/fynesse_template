@@ -67,21 +67,21 @@ def convert_geojson_to_csv(geojson_path, csv_output_path):
                 properties = feature.get('properties', {})
                 geometry = feature.get('geometry', {})
     
-            row = {}
-            row['OA21CD'] = properties.get('OA21CD', '')
-            row['LSOA21CD'] = properties.get('LSOA21CD', '')
-            geom_type = geometry.get('type', '')
-            geom_coordinates = geometry.get('coordinates', '')
-            if geom_type and geom_coordinates:
-              shape_geometry = shape({"type": geom_type, "coordinates": geom_coordinates})
-              row['geometry'] = shape_geometry.wkt
-    
-            if writer is None:
-              headers = list(row.keys())
-              writer = csv.DictWriter(csv_file, fieldnames=headers)
-              writer.writeheader()
-    
-            writer.writerow(row)
+                row = {}
+                row['OA21CD'] = properties.get('OA21CD', '')
+                row['LSOA21CD'] = properties.get('LSOA21CD', '')
+                geom_type = geometry.get('type', '')
+                geom_coordinates = geometry.get('coordinates', '')
+                if geom_type and geom_coordinates:
+                  shape_geometry = shape({"type": geom_type, "coordinates": geom_coordinates})
+                  row['geometry'] = shape_geometry.wkt
+        
+                if writer is None:
+                  headers = list(row.keys())
+                  writer = csv.DictWriter(csv_file, fieldnames=headers)
+                  writer.writeheader()
+        
+                writer.writerow(row)
 
 def split_csv(input_file, chunk_size, output_prefix):
     chunk = pd.read_csv(input_file, chunksize=chunk_size)
