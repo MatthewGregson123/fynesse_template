@@ -16,6 +16,7 @@ import pandas as pd
 import io
 import math
 import ijson
+import osmium
 from shapely import wkt
 from shapely.geometry import shape, Polygon, MultiPolygon
 # This file accesses the data
@@ -309,6 +310,115 @@ def download_census_data(code, base_dir=''):
 
 def load_census_data(code, level='msoa'):
   return pd.read_csv(f'census2021-{code.lower()}/census2021-{code.lower()}-{level}.csv')
+
+class StopProcessing(Exception):
+    pass
+
+class osmiumHandler(osmium.SimpleHandler):
+    def __init__(self, tags, output_file, limit):
+        super(osmiumHandler, self).__init__()
+        self.data = []
+        self.tags = tags
+        self.output_file = output_file
+
+        columns = ['id', 'lat', 'lon']
+        for key in tags:
+          columns.append(key)
+        self.columns = columns
+        self.limit=limit
+        self.count=0
+
+    def node(self, n):
+      if self.count > self.limit:
+        raise StopProcessing
+
+      added = False
+      for key in self.tags:
+
+        if key in n.tags and not added:
+          if type(self.tags[key]) == list:
+            for value in self.tags[key]:
+              if n.tags[key]==value:
+                self.data.append(self.extract_data(n, "node"))
+                self.count += 1
+                added = True
+                break
+
+          else:
+            self.data.append(self.extract_data(n, "node"))
+            self.count += 1
+            added = True
+
+    def way(self, n):
+      if self.count > self.limit:
+        raise StopProcessing
+      if 'geometry' not in n.tags:
+        return
+      added = False
+      for key in self.tags:
+        if key in n.tags and not added:
+          if type(self.tags[key]) == list:
+            for value in self.tags[key]:
+              if n.tags[key]==value:
+                self.data.append(self.extract_data(n, "way"))
+                self.count += 1
+                added = True
+                break
+
+          else:
+            self.data.append(self.extract_data(n, "way"))
+            self.count += 1
+            added = True
+
+    def relation(self, n):
+      if self.count > self.limit:
+        raise StopProcessing
+      if 'geometry' not in n.tags:
+        return
+      added = False
+      for key in self.tags:
+        if key in n.tags and not added:
+          if type(self.tags[key]) == list:
+            for value in self.tags[key]:
+              if n.tags[key]==value:
+                self.data.append(self.extract_data(n, "relation"))
+                self.count += 1
+                added = True
+                break
+
+          else:
+            self.data.append(self.extract_data(n, "relation"))
+            self.count += 1
+            added = True
+
+    def extract_data(self, n, type_of):
+      data = {}
+      data['id'] = n.id
+      if type_of == "node":
+        data['lat'] = n.location.lat
+        data['lon'] = n.location.lon
+      else:
+        data['lat'] = n.tags['geometry'].centroid.y
+        data['lon'] = n.tags['geometry'].centroid.x
+
+      for key in self.tags:
+        value = self.tags[key]
+        if key in n.tags:
+          if (type(value) == list):
+            for v in value:
+              data[key] = n.tags[key]
+              break
+          else:
+            data[key] = n.tags[key]
+        else:
+          data[key] = None
+      return data
+
+    def save_to_csv(self):
+      with open(self.output_file, 'w', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=self.columns)
+        writer.writeheader()
+        writer.writerows(self.data)
 
 def data():
     """Read the data from the web or local file, returning structured format such as a data frame"""
