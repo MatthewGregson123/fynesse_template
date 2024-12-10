@@ -374,8 +374,8 @@ class osmiumHandler(osmium.SimpleHandler):
             added = True
 
       valid = True
+      coordinates = []
       if added == True:
-        coordinates = []
         for n in w.nodes:
           if n.location.valid(): 
             coordinates.append((n.location.lat, n.location.lon,))
