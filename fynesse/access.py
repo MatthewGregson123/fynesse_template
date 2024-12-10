@@ -372,9 +372,9 @@ class osmiumHandler(osmium.SimpleHandler):
             self.data.append(self.extract_data(w, "way"))
             self.count += 1
             added = True
-      
+
+      valid = True
       if added == True:
-        valid = True
         coordinates = []
         for n in w.nodes:
           if n.location.valid(): 
