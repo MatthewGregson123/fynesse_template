@@ -319,18 +319,18 @@ class osmiumHandler(osmium.SimpleHandler):
         super(osmiumHandler, self).__init__()
         self.data = []
         self.tags = tags
+        self.additional_tags = ["addr:postcode", "addr:housenumber", "addr:street"]
         self.output_file = output_file
 
         columns = ['id', 'lat', 'lon']
         for key in tags:
           columns.append(key)
-        for key in additional_tags:
+        for key in self.additional_tags:
             columns.append(key)
         self.columns = columns
         self.limit=limit
         self.count=0
         self.prev_coords = (0, 0)
-        self.additional_tags = ["addr:postcode", "addr:housenumber", "addr:street"]
 
     def node(self, n):
       if self.count > self.limit:
