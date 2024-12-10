@@ -328,6 +328,7 @@ class osmiumHandler(osmium.SimpleHandler):
         self.limit=limit
         self.count=0
         self.prev_coords = (0, 0)
+        self.additional_tags = ["addr:postcode", "addr:housenumber", "addr:street"]
 
     def node(self, n):
       if self.count > self.limit:
@@ -385,7 +386,7 @@ class osmiumHandler(osmium.SimpleHandler):
         line = LineString(coordinates)
         centroid = line.centroid
         self.prev_coords = (centroid.x, centroid.y)
-        self.extract_data(w, "way")
+        self.data.append(self.extract_data(w, "way"))
        
 
     def extract_data(self, n, type_of):
@@ -409,6 +410,12 @@ class osmiumHandler(osmium.SimpleHandler):
             data[key] = n.tags[key]
         else:
           data[key] = None
+      
+      for tag in self.additional_tags:
+        if tag in n.tags:
+          data[tag] = n.tags[tag]
+        else:
+          data[tag] = None
       return data
 
     def save_to_csv(self):
