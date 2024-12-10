@@ -327,6 +327,7 @@ class osmiumHandler(osmium.SimpleHandler):
         self.columns = columns
         self.limit=limit
         self.count=0
+        self.prev_coords = (0, 0)
 
     def node(self, n):
       if self.count > self.limit:
@@ -349,47 +350,43 @@ class osmiumHandler(osmium.SimpleHandler):
             self.count += 1
             added = True
 
-    def way(self, n):
+    def way(self, w):
       if self.count > self.limit:
         raise StopProcessing
-      if 'geometry' not in n.tags:
+      if len(w.nodes) < 2:
         return
+
       added = False
       for key in self.tags:
-        if key in n.tags and not added:
+        if key in w.tags and not added:
           if type(self.tags[key]) == list:
             for value in self.tags[key]:
-              if n.tags[key]==value:
-                self.data.append(self.extract_data(n, "way"))
+              if w.tags[key]==value:
+                self.data.append(self.extract_data(w, "way"))
                 self.count += 1
                 added = True
                 break
 
           else:
-            self.data.append(self.extract_data(n, "way"))
+            self.data.append(self.extract_data(w, "way"))
             self.count += 1
             added = True
-
-    def relation(self, n):
-      if self.count > self.limit:
-        raise StopProcessing
-      if 'geometry' not in n.tags:
-        return
-      added = False
-      for key in self.tags:
-        if key in n.tags and not added:
-          if type(self.tags[key]) == list:
-            for value in self.tags[key]:
-              if n.tags[key]==value:
-                self.data.append(self.extract_data(n, "relation"))
-                self.count += 1
-                added = True
-                break
-
+      
+      if added == True:
+        valid = True
+        coordinates = []
+        for n in w.nodes:
+          if n.location.valid(): 
+            coordinates.append((n.location.lat, n.location.lon,))
           else:
-            self.data.append(self.extract_data(n, "relation"))
-            self.count += 1
-            added = True
+            valid = False
+      
+      if valid == True and len(coordinates) > 1:
+        line = LineString(coordinates)
+        centroid = line.centroid
+        self.prev_coords = (centroid.x, centroid.y)
+        self.extract_data(w, "way")
+       
 
     def extract_data(self, n, type_of):
       data = {}
@@ -398,8 +395,8 @@ class osmiumHandler(osmium.SimpleHandler):
         data['lat'] = n.location.lat
         data['lon'] = n.location.lon
       else:
-        data['lat'] = n.tags['geometry'].centroid.y
-        data['lon'] = n.tags['geometry'].centroid.x
+        data['lat'] = self.prev_coords[0]
+        data['lon'] = self.prev_coords[1]
 
       for key in self.tags:
         value = self.tags[key]
