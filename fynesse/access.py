@@ -324,6 +324,8 @@ class osmiumHandler(osmium.SimpleHandler):
         columns = ['id', 'lat', 'lon']
         for key in tags:
           columns.append(key)
+        for key in additional_tags:
+            columns.append(key)
         self.columns = columns
         self.limit=limit
         self.count=0
