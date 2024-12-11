@@ -390,11 +390,14 @@ class osmiumHandler(osmium.SimpleHandler):
         line = LineString(coordinates)
         centroid = line.centroid
 
-        transformer = Transformer.from_crs("EPSG:4326", "EPSG:3395", always_xy=True)
-        projected_coords = [transformer.transform(lon, lat) for lon, lat in coordinates]
-
-        polygon = Polygon(projected_coords)
-        self.prev_area = polygon.area
+        try:
+            transformer = Transformer.from_crs("EPSG:4326", "EPSG:3395", always_xy=True)
+            projected_coords = [transformer.transform(lon, lat) for lon, lat in coordinates]
+    
+            polygon = Polygon(projected_coords)
+            self.prev_area = polygon.area
+        except:
+            self.prev_area = None
 
         self.prev_coords = (centroid.x, centroid.y)
         self.data.append(self.extract_data(w, "way"))
