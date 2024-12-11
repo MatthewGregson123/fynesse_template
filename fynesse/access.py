@@ -19,6 +19,7 @@ import ijson
 import osmium
 from shapely import wkt
 from shapely.geometry import shape, Polygon, MultiPolygon, LineString, Point
+from pyproj import Transformer
 # This file accesses the data
 
 """Place commands in this file to access the data electronically. Don't remove any missing values, or deal with outliers. Make sure you have legalities correct, both intellectual property and personal data privacy rights. Beyond the legal side also think about the ethical issues around this data. """
@@ -330,6 +331,7 @@ class osmiumHandler(osmium.SimpleHandler):
         self.columns = columns
         self.limit=limit
         self.count=0
+        self.prev_area = 0
         self.prev_coords = (0, 0)
 
     def node(self, n):
@@ -387,6 +389,13 @@ class osmiumHandler(osmium.SimpleHandler):
       if valid == True and len(coordinates) > 1:
         line = LineString(coordinates)
         centroid = line.centroid
+
+        transformer = Transformer.from_crs("EPSG:4326", "EPSG:3395", always_xy=True)
+        projected_coords = [transformer.transform(lon, lat) for lon, lat in coordinates]
+
+        polygon = Polygon(projected_coords)
+        self.prev_area = polygon.area
+
         self.prev_coords = (centroid.x, centroid.y)
         self.data.append(self.extract_data(w, "way"))
        
@@ -397,9 +406,11 @@ class osmiumHandler(osmium.SimpleHandler):
       if type_of == "node":
         data['lat'] = n.location.lat
         data['lon'] = n.location.lon
+        data['area'] = 0
       else:
         data['lat'] = self.prev_coords[0]
         data['lon'] = self.prev_coords[1]
+        data['area'] = self.prev_area
 
       for key in self.tags:
         value = self.tags[key]
@@ -425,7 +436,7 @@ class osmiumHandler(osmium.SimpleHandler):
         writer = csv.DictWriter(csvfile, fieldnames=self.columns)
         writer.writeheader()
         writer.writerows(self.data)
-
+          
 def data():
     """Read the data from the web or local file, returning structured format such as a data frame"""
     raise NotImplementedError
