@@ -323,7 +323,7 @@ class osmiumHandler(osmium.SimpleHandler):
         self.additional_tags = ["addr:postcode", "addr:housenumber", "addr:street"]
         self.output_file = output_file
 
-        columns = ['id', 'lat', 'lon']
+        columns = ['id', 'lat', 'lon', 'area']
         for key in tags:
           columns.append(key)
         for key in self.additional_tags:
