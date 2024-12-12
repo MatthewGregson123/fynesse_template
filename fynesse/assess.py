@@ -289,6 +289,24 @@ def get_pois_counts_from_sql(locations_dict, cursor):
   pois_locations_df = pd.DataFrame(pois_locations, index=locations_dict.keys(), columns=["university", "history", "leisure", "tourism", "cuisine", "office"])
   return pois_locations_df
 
+def pca_analysis(norm_data, locations_dict):
+  pca = decomposition.PCA(n_components=2)
+  pca.fit(norm_data)
+  pca_transformed_data = pca.transform(norm_data)
+
+  locations = []
+  for key in locations_dict:
+    locations.append(key)
+
+  plt.figure(figsize=(10, 8))
+  plt.scatter(pca_transformed_data[:, 0], pca_transformed_data[:, 1], alpha=0.5)
+  for i in range(len(locations_dict)):
+    plt.annotate(locations[i], (pca_transformed_data[i, 0], pca_transformed_data[i, 1]))
+  plt.xlabel('Principal Component 1')
+  plt.ylabel('Principal Component 2')
+
+  plt.show()
+
 def data():
     """Load the data from access and ensure missing values are correctly encoded as well as indices correct, column names informative, date and times correctly formatted. Return a structured data structure such as a data frame."""
     df = access.data()
