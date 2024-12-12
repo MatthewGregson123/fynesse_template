@@ -173,43 +173,35 @@ def create_train_data_L15_pop_density(locations_dict, username, password, url):
     else:
       lat, long = must_examine[j]
       j += 1
-    data = True
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      try:
-        poi_counts_df =  assess.get_pois_counts_from_sql({"location": (lat, long)}, cursor)
-      except:
-        data = False
-        continue
-    if data:
-      c += 1
-      norm_poi_counts_df = poi_counts_df.div(poi_counts_df.sum(axis=1), axis=0)
+    poi_counts_df =  assess.get_pois_counts_from_sql({"location": (lat, long)}, cursor)
+    c += 1
+    norm_poi_counts_df = poi_counts_df.div(poi_counts_df.sum(axis=1), axis=0)
 
 
-      nsec_df =  assess.get_nsec_df_for_locations({"location": (lat, long)}, cursor)
-      nsec_df_noL15 = nsec_df.drop('L15',axis=1)
-      norm_nsec_df = nsec_df.div(nsec_df.sum(axis=1), axis=0)
-      norm_nsec_df_noL15 = nsec_df_noL15.div(nsec_df_noL15.sum(axis=1), axis=0)
+    nsec_df =  assess.get_nsec_df_for_locations({"location": (lat, long)}, cursor)
+    nsec_df_noL15 = nsec_df.drop('L15',axis=1)
+    norm_nsec_df = nsec_df.div(nsec_df.sum(axis=1), axis=0)
+    norm_nsec_df_noL15 = nsec_df_noL15.div(nsec_df_noL15.sum(axis=1), axis=0)
 
-      norm_nsec_poi_counts_df = pd.concat([norm_nsec_df, norm_poi_counts_df], axis=1)
-      norm_nsec_poi_counts_df_noL15 = pd.concat([norm_nsec_df_noL15, norm_poi_counts_df], axis=1)
+    norm_nsec_poi_counts_df = pd.concat([norm_nsec_df, norm_poi_counts_df], axis=1)
+    norm_nsec_poi_counts_df_noL15 = pd.concat([norm_nsec_df_noL15, norm_poi_counts_df], axis=1)
 
-      train_row = norm_nsec_poi_counts_df_noL15.to_numpy()
-      train_row = train_row[0]
-      train_row = np.nan_to_num(train_row, nan=0)
+    train_row = norm_nsec_poi_counts_df_noL15.to_numpy()
+    train_row = train_row[0]
+    train_row = np.nan_to_num(train_row, nan=0)
 
-      x_train.append(train_row)
-      y_train.append(norm_nsec_poi_counts_df['L15'])
+    x_train.append(train_row)
+    y_train.append(norm_nsec_poi_counts_df['L15'])
 
-      density = get_population_density(lat, long, cursor)
-      y_train_density.append(density)
+    density = get_population_density(lat, long, cursor)
+    y_train_density.append(density)
 
-      # train_row = norm_nsec_poi_counts_df.to_numpy()
-      train_row = pd.concat([nsec_df, poi_counts_df], axis=1).to_numpy()
-      train_row = train_row[0]
-      train_row = np.nan_to_num(train_row, nan=0)
+    # train_row = norm_nsec_poi_counts_df.to_numpy()
+    train_row = pd.concat([nsec_df, poi_counts_df], axis=1).to_numpy()
+    train_row = train_row[0]
+    train_row = np.nan_to_num(train_row, nan=0)
 
-      x_train_density.append(train_row)
+    x_train_density.append(train_row)
 
 
   x_train = np.array(x_train)
