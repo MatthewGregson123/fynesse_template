@@ -316,7 +316,7 @@ def estimate_population_density(latitude: float, longitude: float, x_train_densi
 
     return y_pred[0]
 
-def evaluate_L15_density_model(model_name, username, password, url, locations_dict):
+def evaluate_L15_density_model(model_name, username, password, url, locations_dict, x_train, y_train, x_train_density, y_train_density):
   indexes = []
   errors = []
 
@@ -336,9 +336,9 @@ def evaluate_L15_density_model(model_name, username, password, url, locations_di
   while c < target or i < len(locations_dict):
 
     if c < target:
-      index = random.randint(0, len(x_train)-1)
+      index = random.randint(0, len(rows)-1)
       while index in indexes:
-        index = random.randint(0, len(x_train)-1)
+        index = random.randint(0, len(rows)-1)
       indexes.append(index)
       lat, long = rows[index]
       c+=1
@@ -351,10 +351,10 @@ def evaluate_L15_density_model(model_name, username, password, url, locations_di
       nsec_df =  assess.get_nsec_df_for_locations({"location": (lat, long)}, cursor)
       norm_nsec_df = nsec_df.div(nsec_df.sum(axis=1), axis=0)
       y = norm_nsec_df['L15'][0]
-      y_pred = estimate_students(lat, long)
+      y_pred = estimate_students(lat, long, x_train, y_train)
     elif model_name == "density":
       y = get_population_density(lat, long, cursor)
-      y_pred = estimate_population_density(lat, long)
+      y_pred = estimate_population_density(lat, long, x_train_density, y_train_density)
     else:
       raise ValueError("Invalid model name")
 
