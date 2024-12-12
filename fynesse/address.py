@@ -214,7 +214,7 @@ def create_train_data_L15_pop_density(locations_dict, username, password, url):
 
   return x_train, y_train, x_train_density, y_train_density
 
-def estimate_students(latitude: float, longitude: float) -> float:
+def estimate_students(latitude: float, longitude: float, x_train, y_train) -> float:
     """
     Args:
     latitude (float): The latitude coordinate.
@@ -268,7 +268,7 @@ def estimate_students(latitude: float, longitude: float) -> float:
     return y_pred[0]
 
 
-def estimate_population_density(latitude: float, longitude: float) -> float:
+def estimate_population_density(latitude: float, longitude: float, x_train_density, y_train_density) -> float:
     """
     Args:
     latitude (float): The latitude coordinate.
