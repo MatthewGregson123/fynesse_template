@@ -218,4 +218,103 @@ def create_train_data_L15_pop_density(locations_dict, username, password, url):
   y_train_density = np.array(y_train_density)
 
   return x_train, y_train, x_train_density, y_train_density
+
+def evaluate_L15_density_model(model_name, username, password, url, locations_dict):
+  indexes = []
+  errors = []
+
+  ys = []
+  y_preds = []
+
+  conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+  cursor = conn.cursor()
+
+  query = f"SELECT LAT, `LONG` FROM geo_coords_data"
+  cursor.execute(query)
+  rows = cursor.fetchall()
+
+  c = 0
+  target = 100
+  i = 0
+  while c < target or i < len(locations_dict):
+
+    if c < target:
+      index = random.randint(0, len(x_train)-1)
+      while index in indexes:
+        index = random.randint(0, len(x_train)-1)
+      indexes.append(index)
+      lat, long = rows[index]
+      c+=1
+    else:
+      lat, long = locations_dict[list(locations_dict.keys())[i]]
+      i+=1
+
+
+    if model_name == "students":
+      nsec_df = fynesse.assess.get_nsec_df_for_locations({"location": (lat, long)}, cursor)
+      norm_nsec_df = nsec_df.div(nsec_df.sum(axis=1), axis=0)
+      y = norm_nsec_df['L15'][0]
+      y_pred = estimate_students(lat, long)
+    elif model_name == "density":
+      y = get_population_density(lat, long, cursor)
+      y_pred = estimate_population_density(lat, long)
+    else:
+      raise ValueError("Invalid model name")
+
+    ys.append(y)
+    y_preds.append(y_pred)
+
+    if (math.isnan(y-y_pred)):
+      print(lat, long)
+
+
+  cursor.close()
+  conn.close()
+
+  ys = np.array(ys)
+  y_preds = np.array(y_preds)
+
+  errors = ys - y_preds
+
+  print("Max Error: ", np.max(errors))
+  print("Min Error: ", np.min(errors))
+  errors_copy = np.array(errors)
+  errors_copy = (errors_copy ** 2) ** 0.5
+  print("Average Error: ", np.mean(errors_copy))
+  print("Correlation: ", np.corrcoef(ys, y_preds)[0, 1])
+  fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+  axs[0].hist(errors,bins=10)
+  axs[0].set_xlabel('Error')
+  axs[0].set_ylabel('Frequency')
+  axs[0].set_title('Histogram of Errors')
+
+  axs[1].scatter(y_preds, ys)
+  axs[1].set_xlabel('Actual')
+  axs[1].set_ylabel('Predicted')
+  axs[1].set_title('Actual vs Predicted')
+
+  max_val = max(max(ys),max(y_preds))
+  b, a = np.polyfit(ys, y_preds, deg=1)
+  xs = np.linspace(0, max_val, 20)
+  ys = a + b * xs
+  axs[1].plot(xs, ys, color='red', linestyle='dotted', label="line of best fit")
+  axs[1].set_ylim(0, max_val)
+  axs[1].set_xlim(0, max_val)
+  axs[1].plot(np.linspace(0, max(max(ys),max(y_preds)), 20), np.linspace(0, max(max(ys),max(y_preds)), 20), color='red', label="y=x")
+
+  axs[1].legend()
+  plt.show()
+
+  if model_name == "students":
+    model = sm.GLM(y_train, x_train, family=sm.families.Gaussian())
+  else:
+    model = sm.GLM(y_train_density, x_train_density, family=sm.families.Gaussian())
+  fitted_model = model.fit()
+  params = list(fitted_model.params)
+  axs[2].plot(np.linspace(1, len(params), len(params)), params)
+  axs[2].set_xlabel('Parameter')
+  axs[2].set_ylabel('Value')
+  axs[2].set_title('Parameter vs Value')
+
+  plt.show()
   
