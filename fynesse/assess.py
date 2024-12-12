@@ -17,6 +17,7 @@ import math
 import seaborn as sns
 import random
 import pandas as pd
+import access.py
 
 """Place commands in this file to assess the data you have downloaded. How are missing values encoded, how are outliers encoded? What do columns represent, makes rure they are correctly labeled. How is the data indexed. Crete visualisation routines to assess the data (e.g. in bokeh). Ensure that date formats are correct and correctly timezoned."""
 
@@ -260,6 +261,33 @@ def plot_df_columns(data, column_x, column_y):
 
   corr, _ = stats.pearsonr (x, y)
   return corr
+
+def get_nsec_df_for_locations(locations_dict, cursor):
+    nsec_locations = []
+    for location in locations_dict:
+      latitude, longitude = locations_dict[location]
+      north, south, west, east = access.create_bounding_box(latitude, longitude, 1)
+      query = f"SELECT * FROM nsec_data WHERE geography IN (SELECT OA21CD FROM geo_coords_data WHERE LAT <{north} AND LAT >{south} AND `LONG` < {east} AND `LONG` > {west})"
+      cursor.execute(query)
+      nsec_df = pd.DataFrame(cursor.fetchall(), columns=[column[0] for column in cursor.description])
+      nsec_data = nsec_df[["L1_L2_L3", "L4_L5_L6", "L7", "L8_L9", "L10_L11", "L12", "L13", "L14", "L15"]]
+      nsec_data = nsec_data.sum()
+      nsec_locations.append(nsec_data.to_dict())
+    nsec_locations_df = pd.DataFrame(nsec_locations, index=locations_dict.keys())
+    return nsec_locations_df
+
+def get_pois_counts_from_sql(locations_dict, cursor):
+  pois_locations = []
+  for location in locations_dict:
+    latitude, longitude = locations_dict[location]
+    north, south, west, east = access.create_bounding_box(latitude, longitude, 1)
+    query = f"SELECT COUNT(CASE WHEN amenity = 'university' THEN 1 END) AS university, COUNT(CASE WHEN history IS NOT NULL AND history <> '' THEN 1 END) as history, COUNT(CASE WHEN leisure IS NOT NULL AND leisure <> '' THEN 1 END) as leisure,COUNT(CASE WHEN tourism IS NOT NULL AND tourism <> ''  THEN 1 END) as tourism, COUNT(CASE WHEN cuisine IS NOT NULL AND cuisine <> '' THEN 1 END) as cuisine, COUNT(CASE WHEN office IS NOT NULL AND office <> ''  THEN 1 END) as office FROM poi_counts_data WHERE LAT <{north} AND LAT >{south} AND `LONG` < {east} AND `LONG` > {west}"
+    cursor.execute(query)
+    result = cursor.fetchall()
+    poi_df = pd.DataFrame(result, columns=["university", "history", "leisure", "tourism", "cuisine", "office"])
+    pois_locations.append(poi_df.to_numpy()[0])
+  pois_locations_df = pd.DataFrame(pois_locations, index=locations_dict.keys(), columns=["university", "history", "leisure", "tourism", "cuisine", "office"])
+  return pois_locations_df
 
 def data():
     """Load the data from access and ensure missing values are correctly encoded as well as indices correct, column names informative, date and times correctly formatted. Return a structured data structure such as a data frame."""
