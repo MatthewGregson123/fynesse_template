@@ -214,6 +214,108 @@ def create_train_data_L15_pop_density(locations_dict, username, password, url):
 
   return x_train, y_train, x_train_density, y_train_density
 
+def estimate_students(latitude: float, longitude: float) -> float:
+    """
+    Args:
+    latitude (float): The latitude coordinate.
+    longitude (float): The longitude coordinate.
+
+    Returns:
+    float: Estimated share of students in that area (value between 0 and 1).
+    """
+
+    tags = {
+    "amenity": ["university"],
+    "historic": True,
+    "leisure": True,
+    "tourism": True,
+    "cuisine": ["coffee_shop"],
+    "office": True,
+    "parking": True,
+    }
+    with open("credentials.yaml") as file:
+      credentials = yaml.safe_load(file)
+    username = credentials["username"]
+    password = credentials["password"]
+    url = credentials["url"]
+    port = credentials["port"]
+
+    conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+    cursor = conn.cursor()
+
+    poi_counts_df = fynesse.assess.get_pois_counts_from_sql({"location": (latitude, longitude)}, cursor)
+    norm_poi_counts_df = poi_counts_df.div(poi_counts_df.sum(axis=1), axis=0)
+    norm_poi_counts_df = norm_poi_counts_df.fillna(0)
+
+    nsec_df = fynesse.assess.get_nsec_df_for_locations({"location": (latitude, longitude)}, cursor)
+    nsec_df = nsec_df.drop('L15', axis=1)
+    norm_nsec_df = nsec_df.div(nsec_df.sum(axis=1), axis=0)
+    norm_nsec_df = norm_nsec_df.fillna(0)
+
+
+    norm_nsec_poi_counts_df = pd.concat([norm_nsec_df, norm_poi_counts_df], axis=1)
+    x_test = norm_nsec_poi_counts_df.to_numpy()
+
+    model = sm.GLM(y_train, x_train, family=sm.families.Gaussian())
+    fitted_model = model.fit()
+
+    y_pred = fitted_model.predict(x_test)
+
+    cursor.close()
+    conn.close()
+
+
+    return y_pred[0]
+
+
+def estimate_population_density(latitude: float, longitude: float) -> float:
+    """
+    Args:
+    latitude (float): The latitude coordinate.
+    longitude (float): The longitude coordinate.
+
+    Returns:
+    float: Estimated value, percentage, probability, etc
+    """
+
+    tags = {
+    "amenity": ["university"],
+    "historic": True,
+    "leisure": True,
+    "tourism": True,
+    "cuisine": ["coffee_shop"],
+    "office": True,
+    "parking": True,
+    }
+    with open("credentials.yaml") as file:
+      credentials = yaml.safe_load(file)
+    username = credentials["username"]
+    password = credentials["password"]
+    url = credentials["url"]
+    port = credentials["port"]
+
+    conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+    cursor = conn.cursor()
+
+    poi_counts_df = fynesse.assess.get_pois_counts_from_sql({"location": (latitude, longitude)}, cursor)
+
+    nsec_df = fynesse.assess.get_nsec_df_for_locations({"location": (latitude, longitude)}, cursor)
+
+    nsec_poi_counts_df = pd.concat([nsec_df, poi_counts_df], axis=1)
+    nsec_poi_counts_df = nsec_poi_counts_df.fillna(0)
+
+    x_test = nsec_poi_counts_df.to_numpy()
+
+    model = sm.GLM(y_train_density, x_train_density, family=sm.families.Gaussian())
+    fitted_model = model.fit()
+
+    y_pred = fitted_model.predict(x_test)
+
+    cursor.close()
+    conn.close()
+
+    return y_pred[0]
+
 def evaluate_L15_density_model(model_name, username, password, url, locations_dict):
   indexes = []
   errors = []
