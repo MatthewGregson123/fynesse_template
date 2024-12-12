@@ -141,7 +141,7 @@ def create_train_data_L15_pop_density(locations_dict, username, password, url):
   y_train = []
   y_train_density = []
 
-  conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+  conn =  access.create_connection(username, password, url, database='ads_2024')
   cursor = conn.cursor()
 
 
@@ -176,7 +176,7 @@ def create_train_data_L15_pop_density(locations_dict, username, password, url):
     with warnings.catch_warnings():
       warnings.simplefilter("ignore")
       try:
-        poi_counts_df = fynesse.assess.get_pois_counts_from_sql({"location": (lat, long)}, cursor)
+        poi_counts_df =  assess.get_pois_counts_from_sql({"location": (lat, long)}, cursor)
       except:
         data = False
         continue
@@ -185,7 +185,7 @@ def create_train_data_L15_pop_density(locations_dict, username, password, url):
       norm_poi_counts_df = poi_counts_df.div(poi_counts_df.sum(axis=1), axis=0)
 
 
-      nsec_df = fynesse.assess.get_nsec_df_for_locations({"location": (lat, long)}, cursor)
+      nsec_df =  assess.get_nsec_df_for_locations({"location": (lat, long)}, cursor)
       nsec_df_noL15 = nsec_df.drop('L15',axis=1)
       norm_nsec_df = nsec_df.div(nsec_df.sum(axis=1), axis=0)
       norm_nsec_df_noL15 = nsec_df_noL15.div(nsec_df_noL15.sum(axis=1), axis=0)
@@ -226,7 +226,7 @@ def evaluate_L15_density_model(model_name, username, password, url, locations_di
   ys = []
   y_preds = []
 
-  conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+  conn =  access.create_connection(username, password, url, database='ads_2024')
   cursor = conn.cursor()
 
   query = f"SELECT LAT, `LONG` FROM geo_coords_data"
@@ -251,7 +251,7 @@ def evaluate_L15_density_model(model_name, username, password, url, locations_di
 
 
     if model_name == "students":
-      nsec_df = fynesse.assess.get_nsec_df_for_locations({"location": (lat, long)}, cursor)
+      nsec_df =  assess.get_nsec_df_for_locations({"location": (lat, long)}, cursor)
       norm_nsec_df = nsec_df.div(nsec_df.sum(axis=1), axis=0)
       y = norm_nsec_df['L15'][0]
       y_pred = estimate_students(lat, long)
