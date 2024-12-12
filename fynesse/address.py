@@ -240,14 +240,14 @@ def estimate_students(latitude: float, longitude: float) -> float:
     url = credentials["url"]
     port = credentials["port"]
 
-    conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+    conn = access.create_connection(username, password, url, database='ads_2024')
     cursor = conn.cursor()
 
-    poi_counts_df = fynesse.assess.get_pois_counts_from_sql({"location": (latitude, longitude)}, cursor)
+    poi_counts_df = assess.get_pois_counts_from_sql({"location": (latitude, longitude)}, cursor)
     norm_poi_counts_df = poi_counts_df.div(poi_counts_df.sum(axis=1), axis=0)
     norm_poi_counts_df = norm_poi_counts_df.fillna(0)
 
-    nsec_df = fynesse.assess.get_nsec_df_for_locations({"location": (latitude, longitude)}, cursor)
+    nsec_df = assess.get_nsec_df_for_locations({"location": (latitude, longitude)}, cursor)
     nsec_df = nsec_df.drop('L15', axis=1)
     norm_nsec_df = nsec_df.div(nsec_df.sum(axis=1), axis=0)
     norm_nsec_df = norm_nsec_df.fillna(0)
@@ -294,12 +294,12 @@ def estimate_population_density(latitude: float, longitude: float) -> float:
     url = credentials["url"]
     port = credentials["port"]
 
-    conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+    conn = access.create_connection(username, password, url, database='ads_2024')
     cursor = conn.cursor()
 
-    poi_counts_df = fynesse.assess.get_pois_counts_from_sql({"location": (latitude, longitude)}, cursor)
+    poi_counts_df = assess.get_pois_counts_from_sql({"location": (latitude, longitude)}, cursor)
 
-    nsec_df = fynesse.assess.get_nsec_df_for_locations({"location": (latitude, longitude)}, cursor)
+    nsec_df = assess.get_nsec_df_for_locations({"location": (latitude, longitude)}, cursor)
 
     nsec_poi_counts_df = pd.concat([nsec_df, poi_counts_df], axis=1)
     nsec_poi_counts_df = nsec_poi_counts_df.fillna(0)
