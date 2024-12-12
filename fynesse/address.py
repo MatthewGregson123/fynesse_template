@@ -15,6 +15,8 @@ import tensorflow as tf
 import scipy.stats"""
 
 """Address a particular question that arises from the data"""
+from . import access
+from . import assess
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
@@ -119,5 +121,17 @@ def predict_profile(NS_SEC, truth, norm_age_df, x_data, alpha, l1_wt):
   # Show the graph
   plt.legend()
   plt.show()
-  
+
+def get_population_density(lat, long, cursor):
+  north, south, west, east = access.create_bounding_box(lat, long, 1)
+  cursor.execute(f"SELECT pdd.density, pdd.geography, gcd.Shape_Area, gcd.lat, gcd.`LONG`  FROM population_density_data AS pdd INNER JOIN geo_coords_data AS gcd ON pdd.geography = gcd.OA21CD WHERE gcd.LAT <{north} AND gcd.LAT >{south} AND gcd.`LONG` < {east} AND gcd.`LONG` > {west}")
+  density_df = pd.DataFrame(cursor.fetchall(), columns=[column[0] for column in cursor.description])
+
+  density = density_df[["density"]].to_numpy()
+  area = density_df[["Shape_Area"]].to_numpy()
+  density_data = (density * area) / np.sum(area)
+
+  total_density = np.sum(density_data)
+
+  return total_density
   
