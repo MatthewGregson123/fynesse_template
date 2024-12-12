@@ -180,7 +180,7 @@ def sql_create_table(table):
   PRIMARY KEY (`db_id`)
 ) DEFAULT CHARSET=utf8 COLLATE=utf8_bin;""",
   }
-  conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+  conn = create_connection(username, password, url, database='ads_2024')
   cursor = conn.cursor()
   drop_table_query = f"DROP TABLE IF EXISTS `{table}`"
   cursor.execute(drop_table_query)
@@ -198,7 +198,7 @@ def sql_upload_data(table, input_file):
   TERMINATED BY '\\n' 
   IGNORE 1 ROWS;
   """
-  conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+  conn =  create_connection(username, password, url, database='ads_2024')
   cursor = conn.cursor()
   if table == "geo_coords_data":
     query = f"""LOAD DATA LOCAL INFILE '{input_file}'
@@ -220,7 +220,7 @@ IGNORE 1 ROWS
   conn.close()
 
 def sql_upload_geometries():
-  conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+  conn =  create_connection(username, password, url, database='ads_2024')
   cursor = conn.cursor()
   for i in range(1,20):
     query = f"""
@@ -241,7 +241,7 @@ SET geometry = ST_GeomFromText(@geometry, 27700);
 
 def sql_create_index(table, column, index_name):
   query = f"CREATE INDEX {index_name} ON {table}({column})"
-  conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+  conn =  create_connection(username, password, url, database='ads_2024')
   cursor = conn.cursor()
   cursor.execute(query)
   conn.commit()
