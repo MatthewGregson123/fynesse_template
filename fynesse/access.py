@@ -114,7 +114,7 @@ def create_connection(user, password, host, database, port=3306):
         print(f"Error connecting to the MariaDB Server: {e}")
     return conn
 
-def sql_create_table(table):
+def sql_create_table(table, username, password, url):
   schema_queries = {
       'nsec_data': """CREATE TABLE IF NOT EXISTS `nsec_data` (
   `date` int(4) NOT NULL,
@@ -189,7 +189,7 @@ def sql_create_table(table):
   cursor.close()
   conn.close()
 
-def sql_upload_data(table, input_file):
+def sql_upload_data(table, input_file, username, password, url):
   query = f"""LOAD DATA LOCAL INFILE '{input_file}' 
   INTO TABLE `{table}` 
   FIELDS TERMINATED BY ',' 
@@ -219,7 +219,7 @@ IGNORE 1 ROWS
   cursor.close()
   conn.close()
 
-def sql_upload_geometries():
+def sql_upload_geometries(username, password, url):
   conn =  create_connection(username, password, url, database='ads_2024')
   cursor = conn.cursor()
   for i in range(1,20):
@@ -239,7 +239,7 @@ SET geometry = ST_GeomFromText(@geometry, 27700);
   cursor.close()
   conn.close()
 
-def sql_create_index(table, column, index_name):
+def sql_create_index(table, column, index_name, username, password, url):
   query = f"CREATE INDEX {index_name} ON {table}({column})"
   conn =  create_connection(username, password, url, database='ads_2024')
   cursor = conn.cursor()
