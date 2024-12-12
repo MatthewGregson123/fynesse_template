@@ -320,7 +320,7 @@ class osmiumHandler(osmium.SimpleHandler):
         super(osmiumHandler, self).__init__()
         self.data = []
         self.tags = tags
-        self.additional_tags = ["addr:postcode", "addr:housenumber", "addr:street"]
+        self.additional_tags = []
         self.output_file = output_file
 
         columns = ['id', 'lat', 'lon', 'area']
@@ -356,6 +356,8 @@ class osmiumHandler(osmium.SimpleHandler):
             added = True
 
     def way(self, w):
+      self.prev_coords = None
+      self.prev_area = None
       if self.count > self.limit:
         raise StopProcessing
       if len(w.nodes) < 2:
@@ -367,13 +369,11 @@ class osmiumHandler(osmium.SimpleHandler):
           if type(self.tags[key]) == list:
             for value in self.tags[key]:
               if w.tags[key]==value:
-                self.data.append(self.extract_data(w, "way"))
                 self.count += 1
                 added = True
                 break
 
           else:
-            self.data.append(self.extract_data(w, "way"))
             self.count += 1
             added = True
 
