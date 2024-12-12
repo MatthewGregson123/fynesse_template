@@ -114,6 +114,140 @@ def create_connection(user, password, host, database, port=3306):
         print(f"Error connecting to the MariaDB Server: {e}")
     return conn
 
+def sql_create_table(table):
+  schema_queries = {
+      'nsec_data': """CREATE TABLE IF NOT EXISTS `nsec_data` (
+  `date` int(4) NOT NULL,
+  `geography` varchar(10) NOT NULL,
+  `geography_code` varchar(10) NOT NULL,
+  `total` int unsigned NOT NULL,
+  `L1_L2_L3` int unsigned NOT NULL,
+  `L4_L5_L6` int unsigned NOT NULL,
+  `L7` int unsigned NOT NULL,
+  `L8_L9` int unsigned NOT NULL,
+  `L10_L11` int unsigned NOT NULL,
+  `L12` int unsigned NOT NULL,
+  `L13` int unsigned NOT NULL,
+  `L14` int unsigned NOT NULL,
+  `L15` int unsigned NOT NULL,
+  `db_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT, 
+   PRIMARY KEY (`db_id`)
+  ) DEFAULT CHARSET=utf8 COLLATE=utf8_bin;""",
+      'population_density_data': """CREATE TABLE IF NOT EXISTS `population_density_data` (
+  `date` int(4) NOT NULL,
+  `geography` varchar(10) NOT NULL,
+  `geography_code` varchar(10) NOT NULL,
+  `density` float NOT NULL,
+  `db_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  PRIMARY KEY (`db_id`)
+) DEFAULT CHARSET=utf8 COLLATE=utf8_bin;""",
+      'geo_coords_data': """CREATE TABLE IF NOT EXISTS `geo_coords_data` (
+  `FID` int(64) NOT NULL,
+  `OA21CD` varchar(10) NOT NULL,
+  `LSOA21CD` varchar(10) NOT NULL,
+  `LSOA21NM` varchar(50) NOT NULL,
+  `LSOA21NMW` varchar(50) NULL,
+  `BNG_E` int unsigned NOT NULL,
+  `BNG_N` int unsigned NOT NULL,
+  `LAT` float NOT NULL,
+  `LONG` float NOT NULL,
+  `Shape_Area` float NOT NULL,
+  `Shape_Length` float NOT NULL,
+  `db_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  PRIMARY KEY (`db_id`)
+) DEFAULT CHARSET=utf8 COLLATE=utf8_bin;""",
+      'poi_counts_data': """CREATE TABLE IF NOT EXISTS `poi_counts_data` (
+  `LAT` float NOT NULL,
+  `LONG` float NOT NULL,
+  `amenity` varchar(20) NULL,
+  `history` varchar(20) NULL,
+  `leisure` varchar(20) NULL,
+  `tourism` varchar(20) NULL,
+  `cuisine` varchar(20) NULL,
+  `office` varchar(20) NULL,
+  `addr:postcode` varchar(20) NULL,
+  `addr:housenumber` varchar(20) NULL,
+  `addr:street` varchar(40) NULL,
+  `area` float unsigned NULL,
+  `db_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  PRIMARY KEY (`db_id`)
+) DEFAULT CHARSET=utf8 COLLATE=utf8_bin;""",
+      'oa_geometries': """CREATE TABLE IF NOT EXISTS `oa_geometries` (
+  `OA21CD` varchar(10) NOT NULL,
+  `LSOA21CD` varchar(10) NOT NULL,
+  `geometry` GEOMETRY NULL,
+  `db_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  PRIMARY KEY (`db_id`)
+) DEFAULT CHARSET=utf8 COLLATE=utf8_bin;""",
+  }
+  conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+  cursor = conn.cursor()
+  drop_table_query = f"DROP TABLE IF EXISTS `{table}`"
+  cursor.execute(drop_table_query)
+  cursor.execute(schema_queries[table])
+  conn.commit()
+  cursor.close()
+  conn.close()
+
+def sql_upload_data(table, input_file):
+  query = f"""LOAD DATA LOCAL INFILE '{input_file}' 
+  INTO TABLE `{table}` 
+  FIELDS TERMINATED BY ',' 
+  OPTIONALLY ENCLOSED BY '"' 
+  LINES STARTING BY '' 
+  TERMINATED BY '\\n' 
+  IGNORE 1 ROWS;
+  """
+  conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+  cursor = conn.cursor()
+  if table == "geo_coords_data":
+    query = f"""LOAD DATA LOCAL INFILE '{input_file}'
+INTO TABLE `{table}` FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED by '"'
+LINES STARTING BY '' TERMINATED BY '\n'
+IGNORE 1 ROWS
+(FID, OA21CD, LSOA21CD, LSOA21NM, @LSOA21NMW, BNG_E, BNG_N, LAT, `LONG` , Shape_Area, Shape_Length)
+SET LSOA21NMW = NULLIF(TRIM(@LSOA21NMW), '');"""
+  elif table == "poi_counts_data":
+    query = f"""LOAD DATA LOCAL INFILE '{input_file}'
+INTO TABLE `{table}`
+FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED by '"'
+LINES STARTING BY '' TERMINATED BY '\n'
+IGNORE 1 ROWS
+(@dummy, lat, `long`, amenity, history, leisure, tourism, cuisine, office, `addr:postcode`, `addr:housenumber`, `addr:street`, area);"""
+  cursor.execute(query)
+  conn.commit()
+  cursor.close()
+  conn.close()
+
+def sql_upload_geometries():
+  conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+  cursor = conn.cursor()
+  for i in range(1,20):
+    query = f"""
+LOAD DATA LOCAL INFILE './oa_geometries_part_{i}.csv'
+INTO TABLE `oa_geometries`
+FIELDS TERMINATED BY ','
+OPTIONALLY ENCLOSED BY '"'
+LINES STARTING BY '' TERMINATED BY '\n'
+IGNORE 1 ROWS
+(OA21CD, LSOA21CD, @geometry)
+SET geometry = ST_GeomFromText(@geometry, 27700);
+"""
+    cursor.execute(query)
+  conn.commit()
+
+  cursor.close()
+  conn.close()
+
+def sql_create_index(table, column, index_name):
+  query = f"CREATE INDEX {index_name} ON {table}({column})"
+  conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+  cursor = conn.cursor()
+  cursor.execute(query)
+  conn.commit()
+  cursor.close()
+  conn.close()
+
 def housing_upload_join_data(conn, year):
   start_date = str(year) + "-01-01"
   end_date = str(year) + "-12-31"
