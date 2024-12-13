@@ -179,6 +179,18 @@ def sql_create_table(table, username, password, url):
   `db_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   PRIMARY KEY (`db_id`)
 ) DEFAULT CHARSET=utf8 COLLATE=utf8_bin;""",
+      'qualifications_data': """CREATE TABLE IF NOT EXISTS `qualifications_data` (
+  `geography` varchar(10) NOT NULL,
+  `none` int unsigned NOT NULL,
+  `L1` int unsigned NOT NULL,
+  `L2` int unsigned NULL,
+  `ap` int unsigned NOT NULL,
+  `L3` int unsigned NOT NULL,
+  `L4` int unsigned NOT NULL,
+  `other` int unsigned NOT NULL,
+  `db_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  PRIMARY KEY (`db_id`)
+) DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"""
   }
   conn = create_connection(username, password, url, database='ads_2024')
   cursor = conn.cursor()
@@ -214,6 +226,13 @@ FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED by '"'
 LINES STARTING BY '' TERMINATED BY '\n'
 IGNORE 1 ROWS
 (@dummy, lat, `long`, amenity, history, leisure, tourism, cuisine, office, `addr:postcode`, `addr:housenumber`, `addr:street`, area);"""
+  elif table =='qualifications_data':
+      query = """LOAD DATA LOCAL INFILE '{input_file}'
+INTO TABLE `{table}`
+FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED by '"'
+LINES STARTING BY '' TERMINATED BY '\n'
+IGNORE 1 ROWS
+(@dummy, geography, @dummy, @dummy, none, L1, L2, ap, L3, L4, other);"""
   cursor.execute(query)
   conn.commit()
   cursor.close()
@@ -573,6 +592,44 @@ class osmiumHandler(osmium.SimpleHandler):
         writer = csv.DictWriter(csvfile, fieldnames=self.columns)
         writer.writeheader()
         writer.writerows(self.data)
+
+
+def download_oa_to_constituency_data():
+  api_call = "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/OA21_PCON25_LAD21_EW_LU/FeatureServer/0/query"
+  params = {
+      "where": "1=1",
+      "outFields": "OA21CD,PCON25CD",
+      "outSR": "4326",
+      "f": "json",
+      "resultRecordCount": 1000  # Max records per request
+  }
+  response = requests.get(api_call,params = params)
+  collected_data = []
+  if response.status_code == 200:
+      data = response.json()
+      features = data.get('features', [])
+
+      params['resultOffset'] = 0
+      while features:
+        # Process JSON
+        attributes = [feature['attributes'] for feature in features]
+        collected_data.extend(attributes)
+
+        # Update offset
+        params['resultOffset'] += 1000
+
+        # Get the next 1000 rows
+        response = requests.get(api_call, params=params)
+        if response.status_code == 200:
+          data = response.json()
+          features = data.get('features', [])
+        else:
+          break
+  else:
+      print(f"Failed to retrieve data. Status code: {response.status_code}")
+
+  oa_to_constituency_df = pd.DataFrame(collected_data)
+  return oa_to_constituency_df
           
 def data():
     """Read the data from the web or local file, returning structured format such as a data frame"""
