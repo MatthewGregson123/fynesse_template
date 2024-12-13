@@ -337,6 +337,7 @@ def get_average_price_paid_data(lat, lon, distance, username, password, url):
       warnings.simplefilter("ignore")
       _, _, _, _, df2 = access.get_poi_info(tags, north, south, east, west, place_name= "Cambridge")
   except:
+    print("no poi info")
     return 0,0,0
 
   cursor.close()
@@ -352,6 +353,7 @@ def get_average_price_paid_data(lat, lon, distance, username, password, url):
   price_per_sqm_df = price_df / area_df
 
   if len(price_df) == 0 or len(area_df) == 0:
+    print("df lengths not long enough")
     return 0,0,0
   av_price = np.sum(price_df)/len(price_df)
   av_area = np.sum(area_df)/len(area_df)
