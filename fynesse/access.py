@@ -20,6 +20,7 @@ import osmium
 from shapely import wkt
 from shapely.geometry import shape, Polygon, MultiPolygon, LineString, Point
 from pyproj import Transformer
+import warnings
 # This file accesses the data
 
 """Place commands in this file to access the data electronically. Don't remove any missing values, or deal with outliers. Make sure you have legalities correct, both intellectual property and personal data privacy rights. Beyond the legal side also think about the ethical issues around this data. """
@@ -363,7 +364,9 @@ def get_pois_df_for_locations(locations_dict, tags):
 
 def get_poi_info(tags, north, south, east, west, place_name):
   # get pois information
-  pois = ox.geometries_from_bbox(north, south, east, west, tags)
+  with warnings.catch_warnings():
+      warnings.simplefilter("ignore")
+      pois = ox.geometries_from_bbox(north, south, east, west, tags)
 
   # copy before filtering
   buildings_with_addresses_pois = pois.copy()
