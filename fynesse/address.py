@@ -457,7 +457,7 @@ def get_L4_qualifications(lat, long, cursor):
 def generate_train_data(locations_dict, username, password, url):
     conn = access.create_connection(username, password, url, database='ads_2024')
     cursor = conn.cursor()
-    x_train = assess.get_miniproject_df(locations_dict)
+    x_train = assess.get_miniproject_df(locations_dict, username, password, url)
     y_train = []
     for location in locations_dict:
       y_train.append(get_L4_qualifications(locations_dict[location][0], locations_dict[location][1], cursor))
