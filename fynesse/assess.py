@@ -333,9 +333,9 @@ def get_average_price_paid_data(lat, lon, distance, username, password, url):
   }
    #Place name doesn't matter as we aren't using the area or edges that get returned from the function call
   try:
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      _, _, _, _, df2 = access.get_poi_info(tags, north, south, east, west, place_name= "Cambridge")
+    #with warnings.catch_warnings():
+      #warnings.simplefilter("ignore")
+    _, _, _, _, df2 = access.get_poi_info(tags, north, south, east, west, place_name= "Cambridge")
   except:
     print("no poi info")
     return 0,0,0
