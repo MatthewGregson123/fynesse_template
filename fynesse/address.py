@@ -405,7 +405,7 @@ def evaluate_L15_density_model(model_name, username, password, url, locations_di
   if model_name == "students":
     model = sm.GLM(y_train, x_train, family=sm.families.Gaussian())
   else:
-    model = sm.GLM(y_trainy, x_train, family=sm.families.Gaussian())
+    model = sm.GLM(y_train, x_train, family=sm.families.Gaussian())
   fitted_model = model.fit()
   params = list(fitted_model.params)
   axs[2].plot(np.linspace(1, len(params), len(params)), params)
