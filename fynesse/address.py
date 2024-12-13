@@ -598,10 +598,10 @@ def evaluate_L4_model(x_data, y_data, locations_dict, with_price_area, username,
       temp_y = y_data.copy()
       temp_y.pop(i)
 
-      y_pred = estimate_L4_qualifications(coords[i][0], coords[i][1], temp_x, temp_y)
+      y_pred = estimate_L4_qualifications(coords[i][0], coords[i][1], temp_x, temp_y, username, password, url)
       ys.append(y_data[i])
     else:
-      y_pred = estimate_L4_qualifications_without_price_area(coords[i][0], coords[i][1], x_data, y_data)
+      y_pred = estimate_L4_qualifications_without_price_area(coords[i][0], coords[i][1], x_data, y_data, username, password, url)
       actual = get_L4_qualifications(coords[i][0], coords[i][1], cursor)
       ys.append(actual)
 
