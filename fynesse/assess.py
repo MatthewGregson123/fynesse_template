@@ -451,6 +451,75 @@ def get_miniproject_df(locations_dict, username, password, url):
   conn.close()
   return df
 
+def get_qualification_column_histogram(columns, username, password, url):
+  conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+  cursor = conn.cursor()
+
+  query = """SELECT qd.none, qd.L1, qd.L2, qd.ap, qd.L3, qd.L4, qd.other
+  FROM oa_geometries as oag
+  INNER JOIN qualifications_data as qd
+  ON qd.geography = oag.OA21CD;
+  """
+  cursor.execute(query)
+  rows = cursor.fetchall()
+
+  cursor.close()
+  conn.close()
+
+  all_columns = ['none', 'L1', 'L2', 'ap', 'L3', 'L4', 'other']
+
+  qualifications_data = pd.DataFrame(rows, columns=all_columns)
+  normalised_qualifications_data = qualifications_data.div(qualifications_data.sum(axis=1), axis=0)
+
+  fig, axs = plt.subplots(1, len(columns), figsize=(5 * len(columns), 5))
+
+  for i in range(len(columns)):
+    axs[i].hist(normalised_qualifications_data[columns[i]], bins=10, range=(0,1), density=True)
+    axs[i].set_xlabel(f"Proportion of People with {columns[i]} Qualifications")
+    axs[i].set_ylabel("Frequency")
+
+  plt.show()
+
+def plot_qualifications_heat_map_of_england(column, username, password, url):
+  conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+  cursor = conn.cursor()
+
+  query = """SELECT ST_AsText(oag.geometry) as geometry, qd.none, qd.L1, qd.L2, qd.ap, qd.L3, qd.L4, qd.other
+  FROM oa_geometries as oag
+  INNER JOIN qualifications_data as qd
+  ON qd.geography = oag.OA21CD;
+  """
+  cursor.execute(query)
+  rows = cursor.fetchall()
+
+  cursor.close()
+  conn.close()
+
+  columns = ['none', 'L1', 'L2', 'ap', 'L3', 'L4', 'other']
+  all_columns = ['geometry', 'none', 'L1', 'L2', 'ap', 'L3', 'L4', 'other']
+
+  oa_df = pd.DataFrame(rows, columns=all_columns)
+  geometry = oa_df['geometry']
+  qualifications_data = oa_df.drop(columns=['geometry'])
+
+  normalised_qualifications_data = qualifications_data.div(qualifications_data.sum(axis=1), axis=0)
+  normalised_oa_df = pd.concat([geometry, normalised_qualifications_data], axis=1)
+
+  normalised_oa_df['geometry'] = normalised_oa_df['geometry'].apply(loads)
+
+  curr_df = pd.concat([normalised_oa_df['geometry'],normalised_oa_df[column]],axis=1)
+
+  gdf = gpd.GeoDataFrame(curr_df, geometry='geometry')
+  gdf.set_crs("EPSG:27700", inplace=True)
+
+  fig, ax = plt.subplots(figsize=(10, 10))
+  gdf.plot(column=column, cmap='viridis', ax=ax, legend=True, legend_kwds={'label': f"Proportion of People with {column} Qualifications"})
+
+  ax.set_title(f"Heatmap of Proportion of People with {column} Qualifications in England", fontsize=15)
+  ax.set_axis_off()
+
+  plt.show()
+
 def data():
     """Load the data from access and ensure missing values are correctly encoded as well as indices correct, column names informative, date and times correctly formatted. Return a structured data structure such as a data frame."""
     df = access.data()
