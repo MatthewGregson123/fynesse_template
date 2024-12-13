@@ -228,7 +228,7 @@ LINES STARTING BY '' TERMINATED BY '\n'
 IGNORE 1 ROWS
 (@dummy, lat, `long`, amenity, history, leisure, tourism, cuisine, office, `addr:postcode`, `addr:housenumber`, `addr:street`, area);"""
   elif table =='qualifications_data':
-      query = """LOAD DATA LOCAL INFILE '{input_file}'
+      query = f"""LOAD DATA LOCAL INFILE '{input_file}'
 INTO TABLE `{table}`
 FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED by '"'
 LINES STARTING BY '' TERMINATED BY '\n'
