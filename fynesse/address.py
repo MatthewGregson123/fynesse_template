@@ -415,4 +415,244 @@ def evaluate_L15_density_model(model_name, username, password, url, locations_di
   axs[2].set_title('Parameter vs Value')
 
   plt.show()
+
+def choose_locations(number, mandatory, username, password, url):
+  conn = access.create_connection(username, password, url, database='ads_2024')
+  cursor = conn.cursor()
+  query = "SELECT lat, `long` FROM geo_coords_data"
+  cursor.execute(query)
+  rows = cursor.fetchall()
+
+  cursor.close()
+  conn.close()
+
+  seen = []
+  for i in range(number):
+    index = random.randint(0, len(rows)-1)
+    while index in seen:
+      index = random.randint(0, len(rows)-1)
+    seen.append(index)
+    lat, long = rows[index]
+    mandatory[i] = (lat, long)
+  return mandatory
+
+def get_L4_qualifications(lat, long, cursor):
+    north, south, west, east = access.create_bounding_box(lat, long, 1)
+    cursor.execute(f"SELECT qd.none, qd.L1, qd.L2, qd.ap, qd.L3, qd.L4, qd.other, gcd.Shape_Area FROM qualifications_data AS qd INNER JOIN geo_coords_data AS gcd ON qd.geography = gcd.OA21CD WHERE gcd.LAT <{north} AND gcd.LAT >{south} AND gcd.`LONG` < {east} AND gcd.`LONG` > {west}")
+    rows = cursor.fetchall()
+
+    qualification_df = pd.DataFrame(rows, columns=["none", "L1", "L2", "ap", "L3", "L4", "other", "area"])
+    qualification_df = qualification_df.drop(columns=["area"])
+
+    normalised_qualifications_data = qualification_df.div(qualification_df.sum(axis=1), axis=0)
+
+    L4 = normalised_qualifications_data[["L4"]].to_numpy()
+
+    L4_data = L4 / len(L4)
+
+    av_L4 = np.sum(L4_data)
+
+    return av_L4
+
+def generate_train_data(locations_dict, username, password, url):
+    conn = access.create_connection(username, password, url, database='ads_2024')
+    cursor = conn.cursor()
+    x_train = assess.get_miniproject_df(locations_dict)
+    y_train = []
+    for location in locations_dict:
+      y_train.append(get_L4_qualifications(locations_dict[location][0], locations_dict[location][1], cursor))
+    y_train = np.array(y_train)
+    x_train = x_train.to_numpy()
+    cursor.close()
+    conn.close()
+    return x_train, y_train
+
+def estimate_L4_qualifications(latitude, longitude, x_train, y_train, username, password, url):
+    locations_dict = {
+    "Cambridge": (52.2054, 0.1132),
+    "Oxford": (51.7570, -1.2545),
+    "Euston Square": (51.5246, -0.1340),
+    "Temple": (51.5115, -0.1160),
+    "Kensington": (51.4988, -0.1749),
+    "Barnsley": (53.5526, -1.4797),
+    "Mansfield": (53.1472, -1.1987),
+    "Wakefield": (53.6848, -1.5039),
+    "Sunderland": (54.9069, -1.3838),
+    "Rotherham": (53.4300, -1.3568),
+    "Doncaster": (53.5228, -1.1288),
+    "Chesterfield": (53.2350, -1.4210),
+    "Huddersfield": (53.6450, -1.7794)
+    }
+    identical = None
+    for key in locations_dict:
+      if locations_dict[key] == (latitude, longitude):
+        identical = key
+    
+    if identical is not None:
+      locations_dict.pop(identical)
+
+    # x_train, y_train = generate_train_data(locations_dict)
+
+    model = sm.GLM(y_train, x_train, family=sm.families.Gaussian())
+    fitted_model = model.fit()
+
+    x_test = np.array([assess.get_miniproject_df({0: (latitude, longitude)}, username, password, url)])
+
+    y_pred = fitted_model.predict(x_test)
+
+    return y_pred[0][0]
+
+def generate_train_data_without_price_area(username, password, url):
+  conn = access.create_connection(username, password, url, database='ads_2024')
+  cursor = conn.cursor()
+
+  # north, south, west, east = access.create_bounding_box(latitude, longitude, 20)
+  columns = ["erd.Con", "erd.Lab", "erd.LD", "erd.RUK", "erd.Green", "erd.SNP", "erd.PC", "erd.DUP", "erd.SF", "erd.SDLP", "erd.UUP", "erd.APNI", "erd.`All other candidates`", "nd.L1_L2_L3", "nd.L4_L5_L6", "nd.L7", "nd.L8_L9", "nd.L10_L11", "nd.L12", "nd.L13", "nd.L14", "nd.L15", "qd.none", "qd.L1", "qd.L2", "qd.ap", "qd.L3", "qd.L4", "qd.other"]
+  query = f"""
+      SELECT erd.Con, erd.Lab, erd.LD, erd.RUK, erd.Green, erd.SNP, erd.PC, erd.DUP, erd.SF, erd.SDLP, erd.UUP, erd.APNI, erd.`All other candidates`, nd.L1_L2_L3, nd.L4_L5_L6, nd.L7, nd.L8_L9, nd.L10_L11, nd.L12, nd.L13, nd.L14, nd.L15, qd.none, qd.L1, qd.L2, qd.ap, qd.L3, qd.L4, qd.other
+      FROM geo_coords_data AS gcd
+      INNER JOIN oa_to_constituency_data AS ocd ON ocd.OA21CD = gcd.OA21CD
+      INNER JOIN election_results_data AS erd ON ocd.PCON25CD = erd.`ONSID`
+      INNER JOIN nsec_data AS nd on nd.geography = ocd.OA21CD
+      INNER JOIN qualifications_data as qd on qd.geography = ocd.OA21CD
+    """
+  cursor.execute(query)
+  rows = cursor.fetchall()
+
+  cursor.close()
+  conn.close()
+
+  df = pd.DataFrame(rows, columns=columns)
+
+  ys = df[["qd.none", "qd.L1", "qd.L2", "qd.ap", "qd.L3", "qd.L4", "qd.other"]]
+  election = df[["erd.Con", "erd.Lab", "erd.LD", "erd.RUK", "erd.Green", "erd.SNP", "erd.PC", "erd.DUP", "erd.SF", "erd.SDLP", "erd.UUP", "erd.APNI", "erd.`All other candidates`"]]
+  nsec = df[["nd.L1_L2_L3", "nd.L4_L5_L6", "nd.L7", "nd.L8_L9", "nd.L10_L11", "nd.L12", "nd.L13", "nd.L14", "nd.L15"]]
+
+  norm_election = election.div(election.sum(axis=1), axis=0)
+  norm_nsec = nsec.div(nsec.sum(axis=1), axis=0)
+  norm_ys = ys.div(ys.sum(axis=1), axis=0)
+
+  norm_data = pd.concat([norm_election, norm_nsec], axis=1)
+
+  y_train = norm_ys[["qd.L4"]].to_numpy()
+  x_train = norm_data.to_numpy()
+
+  return x_train, y_train
+
+def estimate_L4_qualifications_without_price_area(latitude, longitude, x_train, y_train, username, password, url):
+  model = sm.GLM(y_train, x_train, family=sm.families.Gaussian())
+  fitted_model = model.fit()
+
+  conn = access.create_connection(username, password, url, database='ads_2024')
+  cursor = conn.cursor()
+  north, south, west, east = access.create_bounding_box(latitude, longitude, 1)
+
+  query = f"""
+      SELECT erd.Con, erd.Lab, erd.LD, erd.RUK, erd.Green, erd.SNP, erd.PC, erd.DUP, erd.SF, erd.SDLP, erd.UUP, erd.APNI, erd.`All other candidates`, nd.L1_L2_L3, nd.L4_L5_L6, nd.L7, nd.L8_L9, nd.L10_L11, nd.L12, nd.L13, nd.L14, nd.L15
+      FROM geo_coords_data AS gcd
+      INNER JOIN oa_to_constituency_data AS ocd ON ocd.OA21CD = gcd.OA21CD
+      INNER JOIN election_results_data AS erd ON ocd.PCON25CD = erd.`ONSID`
+      INNER JOIN nsec_data AS nd on nd.geography = ocd.OA21CD
+      WHERE gcd.LAT < {north} AND gcd.LAT > {south} AND gcd.`LONG` < {east} AND gcd.`LONG` > {west}
+    """
+
+  cursor.execute(query)
+  rows = cursor.fetchall()
+
+  cursor.close()
+  conn.close()
   
+  columns = ["erd.Con", "erd.Lab", "erd.LD", "erd.RUK", "erd.Green", "erd.SNP", "erd.PC", "erd.DUP", "erd.SF", "erd.SDLP", "erd.UUP", "erd.APNI", "erd.`All other candidates`", "nd.L1_L2_L3", "nd.L4_L5_L6", "nd.L7", "nd.L8_L9", "nd.L10_L11", "nd.L12", "nd.L13", "nd.L14", "nd.L15"]
+  df = pd.DataFrame(rows, columns=columns)
+
+  election = df[["erd.Con", "erd.Lab", "erd.LD", "erd.RUK", "erd.Green", "erd.SNP", "erd.PC", "erd.DUP", "erd.SF", "erd.SDLP", "erd.UUP", "erd.APNI", "erd.`All other candidates`"]]
+  nsec = df[["nd.L1_L2_L3", "nd.L4_L5_L6", "nd.L7", "nd.L8_L9", "nd.L10_L11", "nd.L12", "nd.L13", "nd.L14", "nd.L15"]]
+
+  norm_election = election.div(election.sum(axis=1), axis=0)
+  norm_nsec = nsec.div(nsec.sum(axis=1), axis=0)
+
+  norm_data = pd.concat([norm_election, norm_nsec], axis=1).to_numpy()
+  averages = np.mean(norm_data, axis=0)
+  
+  y_pred = fitted_model.predict(averages)
+
+  return y_pred[0]
+
+def evaluate_L4_model(x_data, y_data, locations_dict, with_price_area, username, password, url):
+  conn = access.create_connection(username, password, url, database='ads_2024')
+  cursor = conn.cursor()
+
+  coords = []
+  for key in locations_dict:
+    coords.append(locations_dict[key])
+
+  ys = []
+  y_preds = []
+  errors = []
+
+  for i in range(len(locations_dict)):
+    if with_price_area:
+      temp_x = x_data.copy()
+      temp_x.pop(i)
+
+      temp_y = y_data.copy()
+      temp_y.pop(i)
+
+      y_pred = estimate_L4_qualifications(coords[i][0], coords[i][1], temp_x, temp_y)
+      ys.append(y_data[i])
+    else:
+      y_pred = estimate_L4_qualifications_without_price_area(coords[i][0], coords[i][1], x_data, y_data)
+      actual = get_L4_qualifications(coords[i][0], coords[i][1], cursor)
+      ys.append(actual)
+
+    y_preds.append(y_pred)
+
+  ys = np.array(ys)
+  y_preds = np.array(y_preds)
+
+  errors = ys - y_preds
+
+  print("Max Error: ", np.max(errors))
+  print("Min Error: ", np.min(errors))
+  errors_copy = np.array(errors)
+  errors_copy = (errors_copy ** 2) ** 0.5
+  print("Average Error: ", np.mean(errors_copy))
+  print("Correlation: ", np.corrcoef(ys, y_preds)[0, 1])
+
+  plt.hist(errors,bins=10)
+  plt.xlabel('Error')
+  plt.ylabel('Frequency')
+  plt.title('Histogram of Errors')
+  plt.show()
+
+  plt.scatter(y_preds, ys)
+  plt.xlabel('Actual')
+  plt.ylabel('Predicted')
+  plt.title('Actual vs Predicted')
+
+  max_val = max(max(ys),max(y_preds))
+  min_val = min(min(ys),min(y_preds))
+  b, a = np.polyfit(ys, y_preds, deg=1)
+  lbf_xs = np.linspace(min_val, max_val, 20)
+  lbf_ys = a + b * lbf_xs
+  plt.plot(lbf_xs, lbf_ys, color='red', linestyle='dotted', label="line of best fit")
+  plt.ylim(min_val, max_val)
+  plt.xlim(min_val, max_val)
+  plt.plot(np.linspace(min_val, max_val, 20), np.linspace(min_val, max_val, 20), color='red', label="y=x")
+
+  plt.legend()
+  plt.show()
+
+  model = sm.GLM(y_data, x_data, family=sm.families.Gaussian())
+  fitted_model = model.fit()
+
+  params = list(fitted_model.params)
+  plt.plot(np.linspace(1, len(params), len(params)), params)
+  plt.xlabel('Parameter')
+  plt.ylabel('Value')
+  plt.title('Parameter vs Value')
+
+  plt.show()
+
+  cursor.close()
+  conn.close()
