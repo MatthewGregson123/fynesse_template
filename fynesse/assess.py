@@ -452,7 +452,7 @@ def get_miniproject_df(locations_dict, username, password, url):
   return df
 
 def get_qualification_column_histogram(columns, username, password, url):
-  conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+  conn = access.create_connection(username, password, url, database='ads_2024')
   cursor = conn.cursor()
 
   query = """SELECT qd.none, qd.L1, qd.L2, qd.ap, qd.L3, qd.L4, qd.other
@@ -481,7 +481,7 @@ def get_qualification_column_histogram(columns, username, password, url):
   plt.show()
 
 def plot_qualifications_heat_map_of_england(column, username, password, url):
-  conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+  conn = access.create_connection(username, password, url, database='ads_2024')
   cursor = conn.cursor()
 
   query = """SELECT ST_AsText(oag.geometry) as geometry, qd.none, qd.L1, qd.L2, qd.ap, qd.L3, qd.L4, qd.other
