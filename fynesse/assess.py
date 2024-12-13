@@ -432,7 +432,7 @@ def get_miniproject_df(locations_dict, username, password, url):
     row = [location]
     row.extend(list(curr))
 
-    av_price, av_area, av_price_per_sqm = get_average_price_paid_data(latitude,longitude, 1)
+    av_price, av_area, av_price_per_sqm = get_average_price_paid_data(latitude,longitude, 1, username, password, url)
     row.append(av_price)
     row.append(av_area)
     row.append(av_price_per_sqm)
