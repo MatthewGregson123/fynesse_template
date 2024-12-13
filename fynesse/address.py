@@ -317,7 +317,7 @@ def estimate_population_density(latitude: float, longitude: float, x_train_densi
 
     return y_pred[0]
 
-def evaluate_L15_density_model(model_name, username, password, url, locations_dict, x_train, y_train, x_train_density, y_train_density):
+def evaluate_L15_density_model(model_name, username, password, url, locations_dict, x_train, y_train):
   indexes = []
   errors = []
 
@@ -355,7 +355,7 @@ def evaluate_L15_density_model(model_name, username, password, url, locations_di
       y_pred = estimate_students(lat, long, x_train, y_train)
     elif model_name == "density":
       y = get_population_density(lat, long, cursor)
-      y_pred = estimate_population_density(lat, long, x_train_density, y_train_density)
+      y_pred = estimate_population_density(lat, long, x_train, y_train)
     else:
       raise ValueError("Invalid model name")
 
@@ -406,7 +406,7 @@ def evaluate_L15_density_model(model_name, username, password, url, locations_di
   if model_name == "students":
     model = sm.GLM(y_train, x_train, family=sm.families.Gaussian())
   else:
-    model = sm.GLM(y_train_density, x_train_density, family=sm.families.Gaussian())
+    model = sm.GLM(y_trainy, x_train, family=sm.families.Gaussian())
   fitted_model = model.fit()
   params = list(fitted_model.params)
   axs[2].plot(np.linspace(1, len(params), len(params)), params)
