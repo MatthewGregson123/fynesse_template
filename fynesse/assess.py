@@ -307,6 +307,148 @@ def pca_analysis(norm_data, locations_dict):
 
   plt.show()
 
+def get_average_price_paid_data(lat, lon, distance, username, password, url):
+  conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+  cursor = conn.cursor()
+
+  north, south, west, east = fynesse.access.create_bounding_box(lat, lon, distance)
+
+  query = f"""
+  SELECT pp.price, pp.primary_addressable_object_name, pp.secondary_addressable_object_name, pp.street
+  FROM pp_data AS pp
+  INNER JOIN postcode_data AS pd ON pd.postcode = pp.postcode
+  WHERE pd.latitude < {north} AND pd.latitude > {south} AND pd.longitude < {east} AND pd.longitude > {west}
+  """
+  cursor.execute(query)
+  rows = cursor.fetchall()
+
+  columns = ['price', 'primary_addressable_object_name', 'secondary_addressable_object_name', 'street']
+  df1 = pd.DataFrame(rows, columns=columns)
+
+  tags = {
+    "building": True,
+    "addr:postcode": True,
+    "addr:housenumber": True,
+    "addr:street": True,
+  }
+   #Place name doesn't matter as we aren't using the area or edges that get returned from the function call
+  try:
+    with warnings.catch_warnings():
+      warnings.simplefilter("ignore")
+      _, _, _, _, df2 = fynesse.access.get_poi_info(tags, north, south, east, west, place_name= "Cambridge")
+  except:
+    return 0,0,0
+
+  cursor.close()
+  conn.close()
+
+  combined = combine_price_area(df1, df2)
+
+  price_df = combined['price'].to_numpy()
+  area_df = combined['area_sqm'].to_numpy()
+
+  price_df = price_df[area_df != 0]
+  area_df = area_df[area_df != 0]
+  price_per_sqm_df = price_df / area_df
+
+  if len(price_df) == 0 or len(area_df) == 0:
+    return 0,0,0
+  av_price = np.sum(price_df)/len(price_df)
+  av_area = np.sum(area_df)/len(area_df)
+  av_price_per_sqm = np.sum(price_per_sqm_df)/len(price_per_sqm_df)
+
+  return av_price, av_area, av_price_per_sqm
+
+def combine_price_area(price_df, area_df):
+  combined = []
+
+  included_characters =  [chr(ord("A") + i) for i in range(26)]
+  included_characters.append("-")
+  included_characters.extend([str(i) for i in range(10)])
+  area_df_dict = {}
+  for index, row in area_df.iterrows():
+    curr = row.to_dict()
+    temp_str = curr['addr:housenumber'] + curr['addr:street'].upper()
+    i = 0
+    temp_str = list(temp_str)
+    while i < len(temp_str):
+      if temp_str[i] not in included_characters:
+        temp_str.pop(i)
+      else:
+        i += 1
+    temp_str = ''.join(temp_str)
+    area_df_dict[temp_str] = curr['area_sqm']
+
+  for index, row in price_df.iterrows():
+    curr = row.to_dict()
+    temp_str = curr['primary_addressable_object_name'] + curr['street'].upper()
+
+    temp_str = list(temp_str)
+    i = 0
+    while i < len(temp_str):
+      if temp_str[i] not in included_characters:
+        temp_str.pop(i)
+      else:
+        i += 1
+    temp_str = ''.join(temp_str)
+    if temp_str in area_df_dict:
+      combined.append([curr['price'], area_df_dict[temp_str]])
+
+  combined_df = pd.DataFrame(combined, columns=['price', 'area_sqm'])
+
+  return combined_df
+
+def get_miniproject_df(locations_dict, username, password, url):
+  conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+  cursor = conn.cursor()
+  all_rows = []
+  for location in locations_dict:
+    print(location)
+    latitude, longitude = locations_dict[location]
+    north, south, west, east = fynesse.access.create_bounding_box(latitude, longitude, 1)
+    # gcd.OA21CD, gcd.lat, gcd.'long'
+    query = f"""
+      SELECT erd.Con, erd.Lab, erd.LD, erd.RUK, erd.Green, erd.SNP, erd.PC, erd.DUP, erd.SF, erd.SDLP, erd.UUP, erd.APNI, erd.`All other candidates`, nd.L1_L2_L3, nd.L4_L5_L6, nd.L7, nd.L8_L9, nd.L10_L11, nd.L12, nd.L13, nd.L14, nd.L15
+      FROM geo_coords_data AS gcd
+      INNER JOIN oa_to_constituency_data AS ocd ON ocd.OA21CD = gcd.OA21CD
+      INNER JOIN election_results_data AS erd ON ocd.PCON25CD = erd.`ONSID`
+      INNER JOIN nsec_data AS nd on nd.geography = ocd.OA21CD
+      WHERE gcd.LAT <{north} AND gcd.LAT >{south} AND gcd.`LONG` < {east} AND gcd.`LONG` > {west}
+    """
+    cursor.execute(query)
+    rows = cursor.fetchall()
+
+    curr = np.array(list(rows[0]))
+    election = curr[:13]
+    nsec = curr[13:]
+
+    election = election / np.sum(election)
+    nsec = nsec / np.sum(nsec)
+
+    curr = np.concatenate((election, nsec))
+
+    row = [location]
+    row.extend(list(curr))
+
+    av_price, av_area, av_price_per_sqm = get_average_price_paid_data(latitude,longitude, 1)
+    row.append(av_price)
+    row.append(av_area)
+    row.append(av_price_per_sqm)
+
+    all_rows.append(row)
+  columns = ["location", "con", "lab", "ld", "ruk", "green", "snp", "pc", "dup", "sf", "sdlp", "uup", "apni", "other", "L1_L2_L3", "L4_L5_L6", "L7", "L8_L9", "L10_L11", "L12", "L13", "L14", "L15", "av_price", "av_area", "av_price_per_sqm"]
+  df = pd.DataFrame(all_rows, columns=columns)
+  df = df.set_index('location')
+
+  df["av_price"] = df["av_price"] / df["av_price"].max()
+  df["av_area"] = df["av_area"] / df["av_area"].max()
+  df["av_price_per_sqm"] = df["av_price_per_sqm"] / df["av_price_per_sqm"].max()
+
+
+  cursor.close()
+  conn.close()
+  return df
+
 def data():
     """Load the data from access and ensure missing values are correctly encoded as well as indices correct, column names informative, date and times correctly formatted. Return a structured data structure such as a data frame."""
     df = access.data()
