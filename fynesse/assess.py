@@ -407,7 +407,6 @@ def get_miniproject_df(locations_dict, username, password, url):
   cursor = conn.cursor()
   all_rows = []
   for location in locations_dict:
-    print(location)
     latitude, longitude = locations_dict[location]
     north, south, west, east = access.create_bounding_box(latitude, longitude, 1)
     # gcd.OA21CD, gcd.lat, gcd.'long'
