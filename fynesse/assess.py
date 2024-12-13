@@ -308,10 +308,10 @@ def pca_analysis(norm_data, locations_dict):
   plt.show()
 
 def get_average_price_paid_data(lat, lon, distance, username, password, url):
-  conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+  conn = access.create_connection(username, password, url, database='ads_2024')
   cursor = conn.cursor()
 
-  north, south, west, east = fynesse.access.create_bounding_box(lat, lon, distance)
+  north, south, west, east = access.create_bounding_box(lat, lon, distance)
 
   query = f"""
   SELECT pp.price, pp.primary_addressable_object_name, pp.secondary_addressable_object_name, pp.street
@@ -335,7 +335,7 @@ def get_average_price_paid_data(lat, lon, distance, username, password, url):
   try:
     with warnings.catch_warnings():
       warnings.simplefilter("ignore")
-      _, _, _, _, df2 = fynesse.access.get_poi_info(tags, north, south, east, west, place_name= "Cambridge")
+      _, _, _, _, df2 = access.get_poi_info(tags, north, south, east, west, place_name= "Cambridge")
   except:
     return 0,0,0
 
@@ -399,13 +399,13 @@ def combine_price_area(price_df, area_df):
   return combined_df
 
 def get_miniproject_df(locations_dict, username, password, url):
-  conn = fynesse.access.create_connection(username, password, url, database='ads_2024')
+  conn = access.create_connection(username, password, url, database='ads_2024')
   cursor = conn.cursor()
   all_rows = []
   for location in locations_dict:
     print(location)
     latitude, longitude = locations_dict[location]
-    north, south, west, east = fynesse.access.create_bounding_box(latitude, longitude, 1)
+    north, south, west, east = access.create_bounding_box(latitude, longitude, 1)
     # gcd.OA21CD, gcd.lat, gcd.'long'
     query = f"""
       SELECT erd.Con, erd.Lab, erd.LD, erd.RUK, erd.Green, erd.SNP, erd.PC, erd.DUP, erd.SF, erd.SDLP, erd.UUP, erd.APNI, erd.`All other candidates`, nd.L1_L2_L3, nd.L4_L5_L6, nd.L7, nd.L8_L9, nd.L10_L11, nd.L12, nd.L13, nd.L14, nd.L15
