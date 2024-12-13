@@ -401,8 +401,7 @@ def evaluate_L15_density_model(model_name, username, password, url, locations_di
   axs[1].plot(np.linspace(0, max(max(ys),max(y_preds)), 20), np.linspace(0, max(max(ys),max(y_preds)), 20), color='red', label="y=x")
 
   axs[1].legend()
-  plt.show()
-
+  
   if model_name == "students":
     model = sm.GLM(y_train, x_train, family=sm.families.Gaussian())
   else:
@@ -641,7 +640,6 @@ def evaluate_L4_model(x_data, y_data, locations_dict, with_price_area, username,
   axs[1].plot(np.linspace(min_val, max_val, 20), np.linspace(min_val, max_val, 20), color='red', label="y=x")
 
   axs[1].legend()
-  plt.show()
 
   model = sm.GLM(y_data, x_data, family=sm.families.Gaussian())
   fitted_model = model.fit()
