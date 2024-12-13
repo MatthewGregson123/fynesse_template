@@ -619,38 +619,38 @@ def evaluate_L4_model(x_data, y_data, locations_dict, with_price_area, username,
   print("Average Error: ", np.mean(errors_copy))
   print("Correlation: ", np.corrcoef(ys, y_preds)[0, 1])
 
-  plt.hist(errors,bins=10)
-  plt.xlabel('Error')
-  plt.ylabel('Frequency')
-  plt.title('Histogram of Errors')
-  plt.show()
+  fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+  axs[0].hist(errors,bins=10)
+  axs[0].set_xlabel('Error')
+  axs[0].set_ylabel('Frequency')
+  axs[0].set_title('Histogram of Errors')
 
-  plt.scatter(y_preds, ys)
-  plt.xlabel('Actual')
-  plt.ylabel('Predicted')
-  plt.title('Actual vs Predicted')
+  axs[1].scatter(y_preds, ys)
+  axs[1].set_xlabel('Actual')
+  axs[1].set_ylabel('Predicted')
+  axs[1].set_title('Actual vs Predicted')
 
   max_val = max(max(ys),max(y_preds))
   min_val = min(min(ys),min(y_preds))
   b, a = np.polyfit(ys, y_preds, deg=1)
-  lbf_xs = np.linspace(min_val, max_val, 20)
-  lbf_ys = a + b * lbf_xs
-  plt.plot(lbf_xs, lbf_ys, color='red', linestyle='dotted', label="line of best fit")
-  plt.ylim(min_val, max_val)
-  plt.xlim(min_val, max_val)
-  plt.plot(np.linspace(min_val, max_val, 20), np.linspace(min_val, max_val, 20), color='red', label="y=x")
+  xs = np.linspace(0, max_val, 20)
+  ys = a + b * xs
+  axs[1].plot(xs, ys, color='red', linestyle='dotted', label="line of best fit")
+  axs[1].set_ylim(min_val, max_val)
+  axs[1].set_xlim(min_val, max_val)
+  axs[1].plot(np.linspace(min_val, max_val, 20), np.linspace(min_val, max_val, 20), color='red', label="y=x")
 
-  plt.legend()
+  axs[1].legend()
   plt.show()
 
   model = sm.GLM(y_data, x_data, family=sm.families.Gaussian())
   fitted_model = model.fit()
 
   params = list(fitted_model.params)
-  plt.plot(np.linspace(1, len(params), len(params)), params)
-  plt.xlabel('Parameter')
-  plt.ylabel('Value')
-  plt.title('Parameter vs Value')
+  axs[2].plot(np.linspace(1, len(params), len(params)), params)
+  axs[2].set_xlabel('Parameter')
+  axs[2].set_ylabel('Value')
+  axs[2].set_title('Parameter vs Value')
 
   plt.show()
 
